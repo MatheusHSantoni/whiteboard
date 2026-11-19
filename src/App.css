@@ -1,0 +1,32 @@
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: #f3f4f6;
+  font-family: Arial, sans-serif;
+}
+
+.app {
+  padding: 24px;
+}
+
+.app h1 {
+  margin-bottom: 8px;
+}
+
+.app p {
+  margin-top: 0;
+  color: #555;
+}
+
+.quadro {
+  height: 400px;
+  background-color: white;
+  border: 2px dashed gray;
+  border-radius: 10px;
+  margin-top: 20px;
+  padding: 20px;
+}

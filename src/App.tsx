@@ -1,17 +1,6 @@
+import BoardLibrary from "./components/BoardLibrary";
 
-import "./App.css";
-
-function App() {
-  return (
-    <div className="app">
-      <h1>Whiteboard</h1>
-      <p>Meu primeiro quadro digital</p>
-
-      <div className="quadro">
-        Área de desenho
-      </div>
-    </div>
-  );
+export default function App() {
+  const server = document.querySelector('meta[name="whiteboard-storage"][content="server"]');
+  return <BoardLibrary server={Boolean(server)} />;
 }
-
-export default App;

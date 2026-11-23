@@ -26,7 +26,7 @@ function savedShapes() {
 test("salva automaticamente desenhos e edições e recupera após recarregar", async ({ page }) => {
   await page.goto("/");
   const canvas = page.locator("canvas").first();
-  await expect(page.getByText("Clique em um elemento para selecionar. Arraste para mover.")).toBeVisible();
+  await expect(page.getByText("Clique em um elemento ou arraste numa área vazia para selecionar vários.")).toBeVisible();
 
   const shortcuts = page.getByText("Atalhos", { exact: true });
   await shortcuts.focus();
@@ -34,7 +34,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   const shortcutList = page.locator(".shortcut-list");
   await expect(shortcutList).toBeVisible();
   await expect(shortcutList.locator("kbd")).toHaveText([
-    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + T", "Alt + arrastar", "Delete", "Enter", "Shift + Enter", "Esc",
+    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + T", "Alt + arrastar", "Ctrl + clique", "Delete", "Enter", "Shift + Enter", "Esc",
   ]);
   await page.keyboard.press("Enter");
   await expect(shortcutList).toBeHidden();
@@ -98,7 +98,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   ]);
 
   await page.reload();
-  await expect(page.getByText("Clique em um elemento para selecionar. Arraste para mover.")).toBeVisible();
+  await expect(page.getByText("Clique em um elemento ou arraste numa área vazia para selecionar vários.")).toBeVisible();
   await drag(page, canvas, { x: 80, y: 95 }, { x: 110, y: 95 });
   await expect(color).toHaveValue("#dc2638");
   await color.fill("#214bd5");
@@ -244,4 +244,31 @@ test("permite repetir o salvamento automático após uma falha de armazenamento"
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
     expect.objectContaining({ type: "rectangle", width: 60, height: 55 }),
   ]);
+});
+
+test("seleciona por arraste, alterna com Ctrl e move e apaga o conjunto", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  const canvas = page.locator("canvas").first();
+  await page.keyboard.press("Alt+s");
+  await drag(page, canvas, { x: 40, y: 50 }, { x: 90, y: 90 });
+  await page.keyboard.press("Alt+c");
+  await drag(page, canvas, { x: 155, y: 75 }, { x: 177, y: 75 });
+
+  await page.keyboard.press("Alt+v");
+  await drag(page, canvas, { x: 200, y: 120 }, { x: 20, y: 25 });
+  const multiple = page.getByText(/2 elementos selecionados/);
+  await expect(multiple).toBeVisible();
+  await canvas.click({ position: { x: 155, y: 75 }, modifiers: ["Control"] });
+  await expect(multiple).toBeHidden();
+  await canvas.click({ position: { x: 155, y: 75 }, modifiers: ["Control"] });
+  await expect(multiple).toBeVisible();
+
+  await drag(page, canvas, { x: 60, y: 65 }, { x: 90, y: 85 });
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "rectangle", x: 70, y: 70 }),
+    expect.objectContaining({ type: "circle", x: 185, y: 95 }),
+  ]);
+  await page.keyboard.press("Delete");
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([]);
 });

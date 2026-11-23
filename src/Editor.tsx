@@ -12,7 +12,7 @@ const MAX_ZOOM = 200;
 const ZOOM_STEP = 25;
 
 const instructions: Record<Tool, string> = {
-  select: "Clique em um elemento para selecionar. Arraste para mover.",
+  select: "Clique em um elemento ou arraste numa área vazia para selecionar vários.",
   erase: "Clique em um elemento para apagar.",
   rectangle: "Clique e arraste para desenhar um retângulo.",
   circle: "Clique no centro e arraste para definir o raio do círculo.",
@@ -30,7 +30,7 @@ export function Editor({ storage, server, deleting, navigation }: {
   const [styles, setStyles] = useState<Record<Exclude<Tool, "select" | "erase">, ElementStyle>>({
     rectangle: {}, circle: {}, arrow: {}, text: {},
   });
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [zoom, setZoom] = useState(100);
   const [imageError, setImageError] = useState("");
   const [importing, setImporting] = useState(false);
@@ -44,7 +44,8 @@ export function Editor({ storage, server, deleting, navigation }: {
     window.addEventListener("beforeunload", confirmExit);
     return () => window.removeEventListener("beforeunload", confirmExit);
   }, [board.dirty]);
-  const selected = tool === "select" ? board.shapes.find(({ id }) => id === selectedId) : undefined;
+  const selected = tool === "select" && selectedIds.length === 1
+    ? board.shapes.find(({ id }) => id === selectedIds[0]) : undefined;
   const drawingStyle = tool === "select" || tool === "erase" ? undefined : styles[tool];
 
   function changeStyle(patch: ElementStyle) {
@@ -62,7 +63,7 @@ export function Editor({ storage, server, deleting, navigation }: {
     try {
       const image = await readBoardImage(file);
       addShape(image);
-      setSelectedId(image.id);
+      setSelectedIds([image.id]);
       setTool("select");
     } catch (error) {
       setImageError(error instanceof Error ? error.message : "Não foi possível abrir a imagem.");
@@ -91,17 +92,20 @@ export function Editor({ storage, server, deleting, navigation }: {
     updateShape(id, (shape) => shape.type === "arrow" ? { ...shape, bend } : shape);
   }
 
-  function eraseShape(id: string) {
-    board.setShapes((shapes) => shapes.filter((shape) => shape.id !== id));
-    setSelectedId((current) => current === id ? null : current);
+  function eraseShapes(ids: string[]) {
+    const removed = new Set(ids);
+    board.setShapes((shapes) => shapes.filter((shape) => !removed.has(shape.id)));
+    setSelectedIds((current) => current.filter((id) => !removed.has(id)));
   }
 
   function addShape(shape: Shape) {
     board.setShapes((shapes) => [...shapes, shape]);
   }
 
-  function moveShape(id: string, position: Point) {
-    updateShape(id, (shape) => ({ ...shape, x: position.x, y: position.y }));
+  function moveShapes(ids: string[], delta: Point) {
+    const moving = new Set(ids);
+    board.setShapes((shapes) => shapes.map((shape) => moving.has(shape.id)
+      ? { ...shape, x: shape.x + delta.x, y: shape.y + delta.y } : shape));
   }
 
   const status = board.dirty ? "Salvando…" : server ? "Salvo no servidor" : "Salvo neste navegador";
@@ -132,11 +136,13 @@ export function Editor({ storage, server, deleting, navigation }: {
         onImportImage={(file) => void importImage(file)}
         importing={importing}
         onStyleChange={changeStyle}
-        onDelete={selected ? () => eraseShape(selected.id) : undefined}
+        onDelete={tool === "select" && selectedIds.length ? () => eraseShapes(selectedIds) : undefined}
       />
       {!disabled && (
         <p className="instructions">
-          {selected?.type === "arrow" ? "Arraste a ponta roxa para redimensionar a seta ou o ponto branco para ajustar a curva." :
+          {tool === "select" && selectedIds.length > 1
+            ? `${selectedIds.length} elementos selecionados. Arraste para mover ou pressione Delete.`
+            : selected?.type === "arrow" ? "Arraste a ponta roxa para redimensionar a seta ou o ponto branco para ajustar a curva." :
             selected?.type === "image" ? "Arraste a alça no canto da imagem para redimensionar." :
             selected && ["square", "rectangle", "circle"].includes(selected.type)
               ? "Arraste a alça roxa para redimensionar a forma." : instructions[tool]}
@@ -162,13 +168,13 @@ export function Editor({ storage, server, deleting, navigation }: {
           tool={tool}
           drawingStyle={drawingStyle}
           scale={zoom / 100}
-          onErase={eraseShape}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
+          onErase={(id) => eraseShapes([id])}
+          selectedIds={selectedIds}
+          onSelect={setSelectedIds}
           shapes={board.shapes}
           disabled={disabled}
           onAdd={addShape}
-          onMove={moveShape}
+          onMove={moveShapes}
           onImageResize={changeImageSize}
           onResize={changeShapeSize}
           onArrowBend={changeArrowBend}

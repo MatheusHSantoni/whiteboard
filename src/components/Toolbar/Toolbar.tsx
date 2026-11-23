@@ -87,7 +87,11 @@ export default function Toolbar({
             <dd><kbd>Alt + arrastar</kbd></dd>
           </div>
           <div>
-            <dt>Apagar elemento selecionado</dt>
+            <dt>Adicionar ou remover da seleção</dt>
+            <dd><kbd>Ctrl + clique</kbd></dd>
+          </div>
+          <div>
+            <dt>Apagar seleção</dt>
             <dd><kbd>Delete</kbd></dd>
           </div>
           <div>

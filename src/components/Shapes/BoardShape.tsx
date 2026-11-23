@@ -2,7 +2,7 @@ import "konva/lib/shapes/Arrow.js";
 import "konva/lib/shapes/Text.js";
 import "konva/lib/shapes/Circle.js";
 import { useState } from "react";
-import { Arrow, Circle, Group, Text } from "react-konva/lib/ReactKonvaCore.js";
+import { Arrow, Circle, Group, Rect, Text } from "react-konva/lib/ReactKonvaCore.js";
 import { DEFAULT_DRAWING_COLOR, DEFAULT_FILL, DEFAULT_FONT_SIZE, FONTS, resizeShape, type Point, type Shape } from "../../types/shapes";
 import BoardImage from "./BoardImage";
 import Rectangle from "./Rectangle";
@@ -10,6 +10,7 @@ import Rectangle from "./Rectangle";
 type BoardShapeProps = {
   shape: Shape;
   selected?: boolean;
+  showHandles?: boolean;
   preview?: boolean;
   onImageResize?: (id: string, width: number, height: number) => void;
   onResize?: (id: string, point: Point) => void;
@@ -17,7 +18,7 @@ type BoardShapeProps = {
 };
 
 export default function BoardShape({
-  shape: savedShape, selected, preview, onImageResize, onResize, onArrowBend,
+  shape: savedShape, selected, showHandles, preview, onImageResize, onResize, onArrowBend,
 }: BoardShapeProps) {
   const [dragSize, setDragSize] = useState<Point>();
   const shape = dragSize ? resizeShape(savedShape, dragSize) : savedShape;
@@ -54,7 +55,10 @@ export default function BoardShape({
           dash={selected ? [6, 4] : undefined}
         />
       )}
-      {shape.type === "image" && <BoardImage shape={shape} selected={selected} onResize={onImageResize} />}
+      {shape.type === "image" && <BoardImage shape={shape} selected={showHandles} onResize={onImageResize} />}
+      {shape.type === "image" && selected && !showHandles && (
+        <Rect width={shape.width} height={shape.height} stroke="#583ce0" dash={[6, 4]} listening={false} />
+      )}
       {shape.type === "arrow" && (
         <Arrow
           points={curve ? [0, 0, curve.x, curve.y, shape.dx, shape.dy] : [0, 0, shape.dx, shape.dy]}
@@ -68,7 +72,7 @@ export default function BoardShape({
           lineJoin="round"
         />
       )}
-      {selected && bend && (
+      {showHandles && bend && (
         <Circle
           {...bend}
           radius={6}
@@ -84,7 +88,7 @@ export default function BoardShape({
           }}
         />
       )}
-      {selected && resizePoint && (
+      {showHandles && resizePoint && (
         <Circle
           {...resizePoint}
           radius={6}

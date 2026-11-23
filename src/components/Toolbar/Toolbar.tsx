@@ -150,9 +150,17 @@ export default function Toolbar({
           type="color"
           value={style?.fillColor ?? DEFAULT_FILL}
           disabled={disabled || !hasFill}
-          onChange={(event) => onStyleChange({ fillColor: event.target.value })}
+          onChange={(event) => onStyleChange({ fillColor: event.target.value, noFill: false })}
         />
       </label>
+      <button
+        type="button"
+        disabled={disabled || !hasFill}
+        aria-pressed={style?.noFill === true}
+        onClick={() => onStyleChange({ noFill: !style?.noFill })}
+      >
+        Sem preenchimento
+      </button>
       <label className="tool-color compact-style">
         Fonte
         <select

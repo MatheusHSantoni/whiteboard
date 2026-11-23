@@ -40,6 +40,7 @@ export default function BoardShape({
         <Circle
           radius={shape.radius}
           fill={shape.fillColor ?? DEFAULT_FILL}
+          fillEnabled={!shape.noFill}
           stroke={stroke}
           strokeWidth={2}
           dash={selected ? [6, 4] : undefined}

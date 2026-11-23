@@ -19,6 +19,7 @@ export const DEFAULT_FONT_SIZE = 20;
 export type ElementStyle = {
   color?: string;
   fillColor?: string;
+  noFill?: boolean;
   font?: keyof typeof FONTS;
   fontSize?: number;
 };
@@ -73,6 +74,7 @@ export function isShape(value: unknown): value is Shape {
   if (shape.color !== undefined &&
       (typeof shape.color !== "string" || !/^#[\da-f]{6}$/i.test(shape.color))) return false;
 
+  if (shape.noFill !== undefined && typeof shape.noFill !== "boolean") return false;
   if (shape.fillColor !== undefined &&
       (typeof shape.fillColor !== "string" || !/^#[\da-f]{6}$/i.test(shape.fillColor))) return false;
   if (shape.font !== undefined &&

@@ -160,6 +160,23 @@ test("desenha, salva e seleciona um círculo após recarregar", async ({ page })
   await expect(page.getByRole("button", { name: "Exportar Board" })).toBeEnabled();
   await canvas.click({ position: { x: 100, y: 100 } });
   await expect(fill).toHaveValue("#ffec9a");
+  const noFill = page.getByRole("button", { name: "Sem preenchimento" });
+  await noFill.click();
+  await expect(noFill).toHaveAttribute("aria-pressed", "true");
+  await expect.poll(() => canvas.evaluate((node) =>
+    node.getContext("2d").getImageData(100, 100, 1, 1).data[3],
+  )).toBe(0);
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "circle", noFill: true, fillColor: "#ffec9a" }),
+  ]);
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Exportar Board" })).toBeEnabled();
+  await canvas.click({ position: { x: 150, y: 100 } });
+  await expect(noFill).toHaveAttribute("aria-pressed", "true");
+  await noFill.click();
+  await expect.poll(() => canvas.evaluate((node) =>
+    node.getContext("2d").getImageData(100, 100, 1, 1).data[3],
+  )).toBe(255);
 });
 
 test("redimensiona uma imagem e curva uma seta", async ({ page }) => {

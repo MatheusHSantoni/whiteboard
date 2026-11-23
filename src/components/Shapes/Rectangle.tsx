@@ -15,6 +15,7 @@ export default function Rectangle({ shape, stroke, selected }: RectangleProps) {
       height={shape.type === "square" ? shape.size : shape.height}
       cornerRadius={4}
       fill={shape.fillColor ?? DEFAULT_FILL}
+      fillEnabled={!shape.noFill}
       stroke={stroke}
       strokeWidth={2}
       dash={selected ? [6, 4] : undefined}

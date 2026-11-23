@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createDrawing, isShape } from "../../src/types/shapes.ts";
 
-test("cria um quadrado ao arrastar para cima e para a esquerda", () => {
-  assert.deepEqual(createDrawing("s", "square", { x: 40, y: 50 }, { x: 10, y: 30 }), {
-    id: "s", type: "square", x: 10, y: 20, size: 30,
+test("cria um retângulo ao arrastar para cima e para a esquerda", () => {
+  assert.deepEqual(createDrawing("r", "rectangle", { x: 40, y: 50 }, { x: 10, y: 30 }), {
+    id: "r", type: "rectangle", x: 10, y: 30, width: 30, height: 20,
   });
 });
 
@@ -13,6 +13,18 @@ test("mantém a direção da seta e descarta gestos curtos", () => {
     id: "a", type: "arrow", x: 10, y: 20, dx: -6, dy: 10,
   });
   assert.equal(createDrawing("a", "arrow", { x: 0, y: 0 }, { x: 4, y: 4 }), null);
+});
+
+test("cria círculos pelo raio e valida as dimensões das formas", () => {
+  const circle = createDrawing("c", "circle", { x: 80, y: 90 }, { x: 50, y: 50 });
+  assert.deepEqual(circle, { id: "c", type: "circle", x: 80, y: 90, radius: 50 });
+  assert.equal(isShape(circle), true);
+  assert.equal(isShape({ ...circle, radius: Infinity }), false);
+
+  const rectangle = createDrawing("r", "rectangle", { x: 0, y: 0 }, { x: 40, y: 15 });
+  assert.equal(isShape(rectangle), true);
+  assert.equal(isShape({ ...rectangle, height: 0 }), false);
+  assert.equal(createDrawing("r", "rectangle", { x: 0, y: 0 }, { x: 40, y: 0 }), null);
 });
 
 test("rejeita coordenadas inválidas e textos vazios ou longos demais", () => {

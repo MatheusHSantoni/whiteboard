@@ -33,9 +33,9 @@ export default function BoardLibrary({ server }: { server: boolean }) {
     event.preventDefault();
     const form = event.currentTarget;
     const fields = new FormData(form);
-    const name = String(fields.get("name")).trim();
+    const name = String(fields.get("name") ?? "").trim();
     if (!name) {
-      setError("Digite um nome para a lousa.");
+      setError("Digite um nome para o Board.");
       return;
     }
     const file = fields.get("backup");
@@ -48,8 +48,8 @@ export default function BoardLibrary({ server }: { server: boolean }) {
       setActiveId((previous) => previous || board.id);
       form.reset();
     } catch (failure) {
-      setError(failure instanceof SyntaxError ? "O arquivo não contém uma lousa do Whiteboard." :
-        failure instanceof Error ? failure.message : "Não foi possível criar a lousa.");
+      setError(failure instanceof SyntaxError ? "O arquivo não contém um Board do Whiteboard." :
+        failure instanceof Error ? failure.message : "Não foi possível criar o Board.");
     } finally {
       setCreating(false);
     }
@@ -57,7 +57,7 @@ export default function BoardLibrary({ server }: { server: boolean }) {
 
   async function deleteBoard() {
     const board = boards.find(({ id }) => id === activeId);
-    if (!board || !window.confirm(`Excluir a lousa “${board.name}”? Essa ação é permanente.`)) return;
+    if (!board || !window.confirm(`Excluir o Board “${board.name}”? Essa ação é permanente.`)) return;
 
     setDeleting(true);
     setDeleteError("");
@@ -67,7 +67,7 @@ export default function BoardLibrary({ server }: { server: boolean }) {
       setBoards(remaining);
       setActiveId(remaining[0]?.id ?? "");
     } catch {
-      setDeleteError("Não foi possível excluir a lousa. Tente novamente.");
+      setDeleteError("Não foi possível excluir o Board. Tente novamente.");
     } finally {
       setDeleting(false);
     }
@@ -78,7 +78,7 @@ export default function BoardLibrary({ server }: { server: boolean }) {
       <>
         {boards.length > 0 && (
           <label>
-            Minhas Boards
+            Meus Boards
             <select value={activeId} disabled={locked || creating || deleting} onChange={(event) => {
               setDeleteError("");
               setActiveId(event.target.value);
@@ -89,16 +89,16 @@ export default function BoardLibrary({ server }: { server: boolean }) {
         )}
         {activeId && (
           <button type="button" disabled={locked || creating || deleting} onClick={() => void deleteBoard()}>
-            {deleting ? "Excluindo…" : "Excluir lousa"}
+            {deleting ? "Excluindo…" : "Excluir Board"}
           </button>
         )}
         {deleteError && <p role="alert" className="message">{deleteError}</p>}
         <details open={boards.length === 0 ? true : undefined}>
-          <summary>Nova lousa</summary>
+          <summary>Novo Board</summary>
           <form className="board-library" onSubmit={(event) => void addBoard(event)}>
             <label>Nome <input name="name" required maxLength={100} disabled={creating || deleting} /></label>
             <label>Importar arquivo (opcional) <input name="backup" type="file" accept=".json" disabled={creating || deleting} /></label>
-            <button disabled={creating || deleting}>{creating ? "Criando…" : "Criar lousa"}</button>
+            <button disabled={creating || deleting}>{creating ? "Criando…" : "Criar Board"}</button>
             {error && <p role="alert" className="message">{error}</p>}
           </form>
         </details>
@@ -111,9 +111,9 @@ export default function BoardLibrary({ server }: { server: boolean }) {
   return (
     <main className="app">
       <h1>Whiteboard</h1>
-      {loading ? <p role="status">Carregando lousas…</p> : loadError ? (
+      {loading ? <p role="status">Carregando Boards…</p> : loadError ? (
         <div className="message">
-          <p role="alert">Não foi possível carregar suas lousas.</p>
+          <p role="alert">Não foi possível carregar seus Boards.</p>
           <button onClick={() => {
             setLoading(true);
             setLoadError(false);

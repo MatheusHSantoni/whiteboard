@@ -3,7 +3,7 @@ import "konva/lib/shapes/Text.js";
 import "konva/lib/shapes/Circle.js";
 import { useState } from "react";
 import { Arrow, Circle, Group, Text } from "react-konva/lib/ReactKonvaCore.js";
-import { DEFAULT_DRAWING_COLOR, DEFAULT_FONT_SIZE, FONTS, type Point, type Shape } from "../../types/shapes";
+import { DEFAULT_DRAWING_COLOR, DEFAULT_FILL, DEFAULT_FONT_SIZE, FONTS, type Point, type Shape } from "../../types/shapes";
 import BoardImage from "./BoardImage";
 import Rectangle from "./Rectangle";
 
@@ -33,7 +33,18 @@ export default function BoardShape({
       opacity={preview ? 0.65 : 1}
       listening={!preview}
     >
-      {shape.type === "square" && <Rectangle shape={shape} stroke={stroke} selected={selected} />}
+      {(shape.type === "square" || shape.type === "rectangle") && (
+        <Rectangle shape={shape} stroke={stroke} selected={selected} />
+      )}
+      {shape.type === "circle" && (
+        <Circle
+          radius={shape.radius}
+          fill={shape.fillColor ?? DEFAULT_FILL}
+          stroke={stroke}
+          strokeWidth={2}
+          dash={selected ? [6, 4] : undefined}
+        />
+      )}
       {shape.type === "image" && <BoardImage shape={shape} selected={selected} onResize={onImageResize} />}
       {shape.type === "arrow" && (
         <Arrow

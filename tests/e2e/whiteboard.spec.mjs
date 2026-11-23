@@ -34,7 +34,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   const shortcutList = page.locator(".shortcut-list");
   await expect(shortcutList).toBeVisible();
   await expect(shortcutList.locator("kbd")).toHaveText([
-    "Alt + V", "Alt + S", "Alt + A", "Alt + T", "Alt + arrastar", "Delete", "Enter", "Shift + Enter", "Esc",
+    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + T", "Alt + arrastar", "Delete", "Enter", "Shift + Enter", "Esc",
   ]);
   await page.keyboard.press("Enter");
   await expect(shortcutList).toBeHidden();
@@ -57,11 +57,11 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   }
   await page.keyboard.press("Alt+s");
   await color.fill("#dc2638");
-  await expect(page.getByText("Clique e arraste para desenhar um quadrado.")).toBeVisible();
+  await expect(page.getByText("Clique e arraste para desenhar um retângulo.")).toBeVisible();
   await drag(page, canvas, { x: 45, y: 50 }, { x: 105, y: 105 });
 
   await shortcuts.click();
-  await expect(page.getByRole("button", { name: "Quadrado" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("button", { name: "Retângulo" })).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Seta" }).click();
   await expect(shortcutList).toBeHidden();
   await expect(color).toHaveValue("#293452");
@@ -92,7 +92,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   await drag(page, canvas, { x: 60, y: 65 }, { x: 80, y: 95 });
   await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
-    expect.objectContaining({ type: "square", x: 65, y: 80, size: 60, color: "#dc2638" }),
+    expect.objectContaining({ type: "rectangle", x: 65, y: 80, width: 60, height: 55, color: "#dc2638" }),
     expect.objectContaining({ type: "arrow", dx: 65, dy: 0, color: "#16805c" }),
     expect.objectContaining({ type: "text", text: "Meu primeiro quadro", color: "#6337c7" }),
   ]);
@@ -111,7 +111,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   await page.getByLabel("Tamanho").selectOption("32");
   await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
-    expect.objectContaining({ type: "square", x: 95, y: 80, size: 60, color: "#214bd5", fillColor: "#ffec9a" }),
+    expect.objectContaining({ type: "rectangle", x: 95, y: 80, width: 60, height: 55, color: "#214bd5", fillColor: "#ffec9a" }),
     expect.objectContaining({ type: "arrow" }),
     expect.objectContaining({ type: "text", font: "handwriting", fontSize: 32 }),
   ]);
@@ -140,6 +140,26 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   await canvas.click({ position: { x: 220, y: 120 } });
   await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([]);
+});
+
+test("desenha, salva e seleciona um círculo após recarregar", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("option", { name: "Board principal" })).toBeAttached();
+  await expect(page.getByRole("button", { name: "Exportar Board" })).toBeEnabled();
+  const canvas = page.locator("canvas").first();
+
+  await page.keyboard.press("Alt+c");
+  const fill = page.getByLabel("Preenchimento");
+  await fill.fill("#ffec9a");
+  await drag(page, canvas, { x: 100, y: 100 }, { x: 130, y: 140 });
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "circle", x: 100, y: 100, radius: 50, fillColor: "#ffec9a" }),
+  ]);
+
+  await page.reload();
+  await expect(page.getByRole("button", { name: "Exportar Board" })).toBeEnabled();
+  await canvas.click({ position: { x: 100, y: 100 } });
+  await expect(fill).toHaveValue("#ffec9a");
 });
 
 test("redimensiona uma imagem e curva uma seta", async ({ page }) => {
@@ -200,6 +220,6 @@ test("permite repetir o salvamento automático após uma falha de armazenamento"
   await page.getByRole("button", { name: "Tentar salvar novamente" }).click();
   await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
-    expect.objectContaining({ type: "square", size: 60 }),
+    expect.objectContaining({ type: "rectangle", width: 60, height: 55 }),
   ]);
 });

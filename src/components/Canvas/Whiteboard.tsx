@@ -3,14 +3,14 @@ import type { Layer as KonvaLayer } from "konva/lib/Layer";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { Layer, Stage } from "react-konva/lib/ReactKonvaCore.js";
 import BoardShape from "../Shapes/BoardShape";
-import { createDrawing, DEFAULT_FONT_SIZE, FONTS, MAX_TEXT_LENGTH, type ElementStyle, type Point, type Shape, type Tool } from "../../types/shapes";
+import { createDrawing, DEFAULT_FONT_SIZE, FONTS, MAX_TEXT_LENGTH, type DrawingTool, type ElementStyle, type Point, type Shape, type Tool } from "../../types/shapes";
 
 type Gesture = {
   pointerId: number;
   start: Point;
   current: Point;
 } & (
-  | { type: "square" | "arrow"; style?: ElementStyle }
+  | { type: DrawingTool; style?: ElementStyle }
   | { type: "move"; shape: Shape }
 );
 

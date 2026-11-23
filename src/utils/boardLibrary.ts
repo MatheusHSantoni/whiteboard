@@ -62,7 +62,7 @@ export async function readBackup(file: File): Promise<Shape[]> {
   const backup = JSON.parse(await file.text());
   const shapes: unknown = backup?.shapes;
   if (backup?.version !== BACKUP_VERSION || !isShapeList(shapes)) {
-    throw new Error("O arquivo não contém uma lousa do Whiteboard.");
+    throw new Error("O arquivo não contém um Board do Whiteboard.");
   }
   return shapes;
 }
@@ -73,7 +73,7 @@ export function downloadBackup(shapes: Shape[]) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "lousa.whiteboard.json";
+  link.download = "board.whiteboard.json";
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }

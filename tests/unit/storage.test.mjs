@@ -21,7 +21,7 @@ test("rejeita dados salvos com forma inválida ou identificador duplicado", asyn
   await assert.rejects(loadBoard(), /dados inválidos/);
 });
 
-test("lista a lousa existente e salva cada nova lousa separadamente", async () => {
+test("lista o Board existente e salva cada novo Board separadamente", async () => {
   const legacyShape = { id: "legacy", type: "square", x: 10, y: 20, size: 40 };
   const importedShape = { ...legacyShape, id: "imported" };
   await saveBoard([legacyShape]);
@@ -32,7 +32,7 @@ test("lista a lousa existente e salva cada nova lousa separadamente", async () =
   ]);
 
   const [main, ...others] = await listLocalBoards();
-  assert.deepEqual(main, { id: "default", name: "Lousa principal" });
+  assert.deepEqual(main, { id: "default", name: "Board principal" });
   assert.equal(others.length, 2);
   assert.deepEqual(new Set(others.map(({ id }) => id)), new Set([blank.id, imported.id]));
   assert.deepEqual(await loadBoard(blank.id), []);

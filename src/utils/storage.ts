@@ -48,7 +48,7 @@ export async function loadBoard(id = BOARD_KEY): Promise<Shape[]> {
 
 export async function saveBoard(shapes: Shape[], id = BOARD_KEY): Promise<void> {
   await withBoardStore("readwrite", (store) => {
-    // A checagem e a gravação compartilham a transação para não recriar uma lousa excluída.
+    // A checagem e a gravação compartilham a transação para não recriar um Board excluído.
     const metadata = id === BOARD_KEY ? LEGACY_REMOVED : SUMMARY_PREFIX + id;
     const request = store.getKey(metadata);
     request.onsuccess = () => {
@@ -68,7 +68,7 @@ export async function listLocalBoards(): Promise<BoardSummary[]> {
     store.getAll(IDBKeyRange.bound(SUMMARY_PREFIX, SUMMARY_PREFIX + "\uffff")),
   );
   const boards = rows.filter((row) => row !== true);
-  return rows.includes(true) ? boards : [{ id: BOARD_KEY, name: "Lousa principal" }, ...boards];
+  return rows.includes(true) ? boards : [{ id: BOARD_KEY, name: "Board principal" }, ...boards];
 }
 
 export async function createLocalBoard(name: string, shapes: Shape[]): Promise<BoardSummary> {

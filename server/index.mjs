@@ -68,7 +68,7 @@ async function api(request, response, path) {
   if (match && method === "GET") {
     const board = select.get(match[1]);
     return board ? json(response, 200, { ...board, shapes: JSON.parse(board.shapes) }) :
-      json(response, 404, { error: "Lousa não encontrada." });
+      json(response, 404, { error: "Board não encontrado." });
   }
 
   if (match && method === "DELETE") {
@@ -82,7 +82,7 @@ async function api(request, response, path) {
     // The custom header prevents writes from cross-origin HTML forms.
     if (request.headers["x-whiteboard"] !== "1") return json(response, 403, {});
     const data = await readJson(request);
-    if (!isShapeList(data?.shapes)) return json(response, 400, { error: "Lousa inválida." });
+    if (!isShapeList(data?.shapes)) return json(response, 400, { error: "Board inválido." });
     const shapes = JSON.stringify(data.shapes);
     if (method === "POST") {
       const name = typeof data.name === "string" ? data.name.trim() : "";
@@ -93,7 +93,7 @@ async function api(request, response, path) {
     }
     if (!Number.isSafeInteger(data.revision) || data.revision < 0) return json(response, 400, {});
     if (!update.run(shapes, match[1], data.revision).changes) {
-      return json(response, 409, { error: "A lousa foi alterada em outra aba ou computador." });
+      return json(response, 409, { error: "O Board foi alterado em outra aba ou computador." });
     }
     return json(response, 200, { revision: data.revision + 1 });
   }
@@ -106,7 +106,7 @@ const server = createServer(async (request, response) => {
   response.setHeader("Content-Security-Policy", "frame-ancestors 'none'");
   if (!timingSafeEqual(hash(request.headers.authorization || ""), authorization)) {
     response.writeHead(401, { "WWW-Authenticate": 'Basic realm="Whiteboard", charset="UTF-8"' });
-    return response.end("Entre para acessar suas lousas.");
+    return response.end("Entre para acessar seus Boards.");
   }
 
   try {
@@ -125,7 +125,7 @@ const server = createServer(async (request, response) => {
   } catch (error) {
     const status = error instanceof RangeError ? 413 : error instanceof SyntaxError ? 400 : 500;
     if (status === 500) console.error(error);
-    json(response, status, { error: status === 413 ? "A lousa excede 50 MB." : "Não foi possível concluir a operação." });
+    json(response, status, { error: status === 413 ? "O Board excede 50 MB." : "Não foi possível concluir a operação." });
   }
 });
 

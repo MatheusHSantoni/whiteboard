@@ -1,12 +1,13 @@
 import { useEffect } from "react";
 import {
   DEFAULT_DRAWING_COLOR, DEFAULT_FILL, DEFAULT_FONT_SIZE, FONTS, FONT_SIZES,
-  IMAGE_TYPES, type ElementStyle, type Tool,
+  IMAGE_TYPES, type ElementStyle, type Shape, type Tool,
 } from "../../types/shapes";
 
 const tools = [
   { id: "select", label: "Selecionar", icon: "↖", key: "V" },
-  { id: "square", label: "Quadrado", icon: "□", key: "S" },
+  { id: "rectangle", label: "Retângulo", icon: "▭", key: "S" },
+  { id: "circle", label: "Círculo", icon: "○", key: "C" },
   { id: "arrow", label: "Seta", icon: "↗", key: "A" },
   { id: "text", label: "Texto", icon: "T", key: "T" },
 ] as const;
@@ -16,7 +17,7 @@ type ToolbarProps = {
   onToolChange: (tool: Tool) => void;
   disabled: boolean;
   style?: ElementStyle;
-  styleType: Tool | "image";
+  styleType: Tool | Shape["type"];
   onImportImage: (file: File) => void;
   importing: boolean;
   onStyleChange: (patch: ElementStyle) => void;
@@ -26,6 +27,8 @@ type ToolbarProps = {
 export default function Toolbar({
   activeTool, onToolChange, disabled, style, styleType, onStyleChange, onDelete, onImportImage, importing,
 }: ToolbarProps) {
+  const hasFill = styleType === "square" || styleType === "rectangle" || styleType === "circle";
+
   useEffect(() => {
     function handleShortcut(event: KeyboardEvent) {
       if (disabled || event.defaultPrevented || event.ctrlKey ||
@@ -80,7 +83,7 @@ export default function Toolbar({
             </div>
           ))}
           <div>
-            <dt>Mover a lousa</dt>
+            <dt>Mover o Board</dt>
             <dd><kbd>Alt + arrastar</kbd></dd>
           </div>
           <div>
@@ -131,11 +134,11 @@ export default function Toolbar({
         />
       </label>
       <label className="tool-color">
-        {styleType === "square" ? "Contorno" : "Cor"}
+        {hasFill ? "Contorno" : "Cor"}
         <input
           type="color"
           aria-label="Cor da ferramenta"
-          title={styleType === "square" ? "Cor do contorno" : undefined}
+          title={hasFill ? "Cor do contorno" : undefined}
           value={style?.color ?? DEFAULT_DRAWING_COLOR}
           disabled={disabled || !style}
           onChange={(event) => onStyleChange({ color: event.target.value })}
@@ -146,7 +149,7 @@ export default function Toolbar({
         <input
           type="color"
           value={style?.fillColor ?? DEFAULT_FILL}
-          disabled={disabled || styleType !== "square"}
+          disabled={disabled || !hasFill}
           onChange={(event) => onStyleChange({ fillColor: event.target.value })}
         />
       </label>

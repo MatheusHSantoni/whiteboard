@@ -14,7 +14,8 @@ const ZOOM_STEP = 25;
 const instructions: Record<Tool, string> = {
   select: "Clique em um elemento para selecionar. Arraste para mover.",
   erase: "Clique em um elemento para apagar.",
-  square: "Clique e arraste para desenhar um quadrado.",
+  rectangle: "Clique e arraste para desenhar um retângulo.",
+  circle: "Clique no centro e arraste para definir o raio do círculo.",
   arrow: "Clique e arraste do início até a ponta da seta.",
   text: "Clique no quadro e digite. Enter confirma e Esc cancela.",
 };
@@ -26,8 +27,8 @@ export function Editor({ storage, server, deleting, navigation }: {
   navigation?: (locked: boolean) => ReactNode;
 }) {
   const [tool, setTool] = useState<Tool>("select");
-  const [styles, setStyles] = useState<Record<Exclude<Shape["type"], "image">, ElementStyle>>({
-    square: {}, arrow: {}, text: {},
+  const [styles, setStyles] = useState<Record<Exclude<Tool, "select" | "erase">, ElementStyle>>({
+    rectangle: {}, circle: {}, arrow: {}, text: {},
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [zoom, setZoom] = useState(100);
@@ -112,7 +113,7 @@ export function Editor({ storage, server, deleting, navigation }: {
       <div className="board-library">
         {navigation?.(board.dirty || importing)}
         <button type="button" disabled={disabled} onClick={() => downloadBackup(board.shapes)}>
-          Exportar lousa
+          Exportar Board
         </button>
       </div>
 

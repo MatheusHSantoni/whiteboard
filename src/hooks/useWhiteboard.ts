@@ -21,7 +21,7 @@ export function useWhiteboard(storage: BoardStorage) {
       setSavedShapes(storedShapes);
     }).catch((error: unknown) => {
       if (!active) return;
-      console.error("Falha ao carregar a lousa.", error);
+      console.error("Falha ao carregar o Board.", error);
       setLoadFailed(true);
     }).finally(() => {
       if (active) setLoading(false);
@@ -41,7 +41,7 @@ export function useWhiteboard(storage: BoardStorage) {
       setSavedShapes(shapes);
       setSaveFailure(null);
     }).catch((error: unknown) => {
-      console.error("Falha ao salvar a lousa.", error);
+      console.error("Falha ao salvar o Board.", error);
       setSaveFailure({ shapes, message: error instanceof Error ? error.message : "" });
     }).finally(() => {
       writeInProgress.current = false;

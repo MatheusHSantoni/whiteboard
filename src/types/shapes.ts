@@ -1,5 +1,5 @@
 export type Point = { x: number; y: number };
-export type DrawingTool = "square" | "arrow";
+export type DrawingTool = "rectangle" | "circle" | "arrow";
 export type Tool = "select" | "erase" | "text" | DrawingTool;
 
 export const FONTS = {
@@ -27,6 +27,8 @@ type PositionedShape = Point & ElementStyle & { id: string };
 
 export type Shape = PositionedShape & (
   | { type: "square"; size: number }
+  | { type: "rectangle"; width: number; height: number }
+  | { type: "circle"; radius: number }
   | { type: "arrow"; dx: number; dy: number; bend?: Point }
   | { type: "image"; src: string; width: number; height: number }
   | { type: "text"; text: string }
@@ -47,18 +49,19 @@ export function createDrawing(
 ): Shape | null {
   const dx = end.x - start.x;
   const dy = end.y - start.y;
-  const size = Math.max(Math.abs(dx), Math.abs(dy));
-  if (size < 5) return null;
+  const width = Math.abs(dx);
+  const height = Math.abs(dy);
+  if (Math.max(width, height) < 5) return null;
 
   if (type === "arrow") return { id, type, ...start, dx, dy };
+  if (type === "circle") return { id, type, ...start, radius: Math.hypot(dx, dy) };
+  if (width === 0 || height === 0) return null;
 
-  return {
-    id,
-    type,
-    x: start.x - (dx < 0 ? size : 0),
-    y: start.y - (dy < 0 ? size : 0),
-    size,
-  };
+  return { id, type, x: Math.min(start.x, end.x), y: Math.min(start.y, end.y), width, height };
+}
+
+function isPositiveNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
 export function isShape(value: unknown): value is Shape {
@@ -79,7 +82,11 @@ export function isShape(value: unknown): value is Shape {
 
   switch (shape.type) {
     case "square":
-      return typeof shape.size === "number" && Number.isFinite(shape.size) && shape.size > 0;
+      return isPositiveNumber(shape.size);
+    case "rectangle":
+      return isPositiveNumber(shape.width) && isPositiveNumber(shape.height);
+    case "circle":
+      return isPositiveNumber(shape.radius);
     case "arrow":
       return Number.isFinite(shape.dx) && Number.isFinite(shape.dy) &&
         (shape.dx !== 0 || shape.dy !== 0) &&

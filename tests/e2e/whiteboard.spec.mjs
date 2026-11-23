@@ -177,6 +177,10 @@ test("desenha, salva e seleciona um círculo após recarregar", async ({ page })
   await expect.poll(() => canvas.evaluate((node) =>
     node.getContext("2d").getImageData(100, 100, 1, 1).data[3],
   )).toBe(255);
+  await drag(page, canvas, { x: 150, y: 100 }, { x: 175, y: 100 });
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "circle", x: 100, y: 100, radius: 75 }),
+  ]);
 });
 
 test("redimensiona uma imagem e curva uma seta", async ({ page }) => {
@@ -204,13 +208,14 @@ test("redimensiona uma imagem e curva uma seta", async ({ page }) => {
   await drag(page, canvas, { x: 180, y: 100 }, { x: 280, y: 100 });
   await page.keyboard.press("Alt+v");
   await canvas.click({ position: { x: 190, y: 100 } });
-  await expect(page.getByText(/Arraste o ponto/)).toBeVisible();
+  await expect(page.getByText(/Arraste a ponta roxa/)).toBeVisible();
   await drag(page, canvas, { x: 230, y: 100 }, { x: 230, y: 145 });
+  await drag(page, canvas, { x: 280, y: 100 }, { x: 320, y: 80 });
 
   await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
     expect.objectContaining({ type: "image", width: 120, height: 90 }),
-    expect.objectContaining({ type: "arrow", bend: { x: 50, y: 45 } }),
+    expect.objectContaining({ type: "arrow", dx: 140, dy: -20, bend: { x: 50, y: 45 } }),
   ]);
 });
 

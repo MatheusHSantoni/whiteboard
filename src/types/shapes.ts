@@ -65,6 +65,19 @@ function isPositiveNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
+export function resizeShape(shape: Shape, point: Point): Shape {
+  const { x, y } = point;
+  if (shape.type === "rectangle") {
+    return { ...shape, width: Math.max(5, x), height: Math.max(5, y) };
+  }
+  if (shape.type === "square") return { ...shape, size: Math.max(5, x, y) };
+  if (shape.type === "circle") return { ...shape, radius: Math.max(5, x) };
+  if (shape.type === "arrow" && Math.hypot(x, y) >= 5) {
+    return { ...shape, dx: x, dy: y };
+  }
+  return shape;
+}
+
 export function isShape(value: unknown): value is Shape {
   if (typeof value !== "object" || value === null) return false;
   const shape = value as Record<string, unknown>;

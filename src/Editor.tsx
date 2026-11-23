@@ -5,7 +5,7 @@ import Whiteboard from "./components/Canvas/Whiteboard";
 import Toolbar from "./components/Toolbar/Toolbar";
 import { readBoardImage } from "./utils/boardImage";
 import { useWhiteboard } from "./hooks/useWhiteboard";
-import { type ElementStyle, type Point, type Shape, type Tool } from "./types/shapes";
+import { resizeShape, type ElementStyle, type Point, type Shape, type Tool } from "./types/shapes";
 
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 200;
@@ -81,6 +81,12 @@ export function Editor({ storage, server, deleting, navigation }: {
     updateShape(id, (shape) => shape.type === "image" ? { ...shape, width, height } : shape);
   }
 
+  function changeShapeSize(id: string, point: Point) {
+    board.setShapes((shapes) => shapes.map((shape) =>
+      shape.id === id ? resizeShape(shape, point) : shape,
+    ));
+  }
+
   function changeArrowBend(id: string, bend: Point) {
     updateShape(id, (shape) => shape.type === "arrow" ? { ...shape, bend } : shape);
   }
@@ -130,9 +136,10 @@ export function Editor({ storage, server, deleting, navigation }: {
       />
       {!disabled && (
         <p className="instructions">
-          {selected?.type === "arrow" ? "Arraste o ponto da seta para ajustar a curva." :
+          {selected?.type === "arrow" ? "Arraste a ponta roxa para redimensionar a seta ou o ponto branco para ajustar a curva." :
             selected?.type === "image" ? "Arraste a alça no canto da imagem para redimensionar." :
-            instructions[tool]}
+            selected && ["square", "rectangle", "circle"].includes(selected.type)
+              ? "Arraste a alça roxa para redimensionar a forma." : instructions[tool]}
         </p>
       )}
       {imageError && <p className="message" role="alert">{imageError}</p>}
@@ -163,6 +170,7 @@ export function Editor({ storage, server, deleting, navigation }: {
           onAdd={addShape}
           onMove={moveShape}
           onImageResize={changeImageSize}
+          onResize={changeShapeSize}
           onArrowBend={changeArrowBend}
         />
         <div className="zoom-controls" role="group" aria-label="Zoom do quadro">

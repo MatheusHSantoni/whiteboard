@@ -3,7 +3,7 @@ import "konva/lib/shapes/Text.js";
 import "konva/lib/shapes/Circle.js";
 import { useState } from "react";
 import { Arrow, Circle, Group, Text } from "react-konva/lib/ReactKonvaCore.js";
-import { DEFAULT_DRAWING_COLOR, DEFAULT_FILL, DEFAULT_FONT_SIZE, FONTS, type Point, type Shape } from "../../types/shapes";
+import { DEFAULT_DRAWING_COLOR, DEFAULT_FILL, DEFAULT_FONT_SIZE, FONTS, resizeShape, type Point, type Shape } from "../../types/shapes";
 import BoardImage from "./BoardImage";
 import Rectangle from "./Rectangle";
 
@@ -12,17 +12,25 @@ type BoardShapeProps = {
   selected?: boolean;
   preview?: boolean;
   onImageResize?: (id: string, width: number, height: number) => void;
+  onResize?: (id: string, point: Point) => void;
   onArrowBend?: (id: string, bend: Point) => void;
 };
 
 export default function BoardShape({
-  shape, selected, preview, onImageResize, onArrowBend,
+  shape: savedShape, selected, preview, onImageResize, onResize, onArrowBend,
 }: BoardShapeProps) {
+  const [dragSize, setDragSize] = useState<Point>();
+  const shape = dragSize ? resizeShape(savedShape, dragSize) : savedShape;
   const stroke = shape.color ?? DEFAULT_DRAWING_COLOR;
 
   const [dragBend, setDragBend] = useState<Point>();
   const curve = dragBend ?? (shape.type === "arrow" ? shape.bend : undefined);
   const bend = shape.type === "arrow" ? curve ?? { x: shape.dx / 2, y: shape.dy / 2 } : null;
+
+  const resizePoint = shape.type === "arrow" ? { x: shape.dx, y: shape.dy } :
+    shape.type === "rectangle" ? { x: shape.width, y: shape.height } :
+    shape.type === "square" ? { x: shape.size, y: shape.size } :
+    shape.type === "circle" ? { x: shape.radius, y: 0 } : null;
 
   return (
     <Group
@@ -73,6 +81,22 @@ export default function BoardShape({
           onDragEnd={(event) => {
             onArrowBend?.(shape.id, event.target.position());
             setDragBend(undefined);
+          }}
+        />
+      )}
+      {selected && resizePoint && (
+        <Circle
+          {...resizePoint}
+          radius={6}
+          fill="#583ce0"
+          stroke="#fff"
+          strokeWidth={2}
+          draggable
+          onPointerDown={(event) => { event.cancelBubble = true; }}
+          onDragMove={(event) => setDragSize(event.target.position())}
+          onDragEnd={(event) => {
+            onResize?.(shape.id, event.target.position());
+            setDragSize(undefined);
           }}
         />
       )}

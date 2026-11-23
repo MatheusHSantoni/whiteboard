@@ -32,6 +32,7 @@ type WhiteboardProps = {
   onAdd: (shape: Shape) => void;
   onMove: (id: string, position: Point) => void;
   onImageResize: (id: string, width: number, height: number) => void;
+  onResize: (id: string, point: Point) => void;
   onArrowBend: (id: string, bend: Point) => void;
 };
 
@@ -41,7 +42,7 @@ function getMovedShape(gesture: Extract<Gesture, { type: "move" }>): Shape {
 }
 
 export default function Whiteboard({
-  tool, drawingStyle, scale, onErase, selectedId, onSelect, shapes, disabled, onAdd, onMove, onImageResize, onArrowBend,
+  tool, drawingStyle, scale, onErase, selectedId, onSelect, shapes, disabled, onAdd, onMove, onImageResize, onResize, onArrowBend,
 }: WhiteboardProps) {
   const layer = useRef<KonvaLayer>(null);
   const container = useRef<HTMLDivElement>(null);
@@ -184,6 +185,7 @@ export default function Whiteboard({
               shape={shape.id === moving?.id ? moving : shape}
               selected={tool === "select" && shape.id === selectedId}
               onImageResize={onImageResize}
+              onResize={onResize}
               onArrowBend={onArrowBend}
             />
           ))}

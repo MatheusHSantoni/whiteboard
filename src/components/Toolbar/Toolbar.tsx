@@ -148,23 +148,37 @@ export default function Toolbar({
           onChange={(event) => onStyleChange({ color: event.target.value })}
         />
       </label>
-      <label className="tool-color compact-style">
-        Preenchimento
-        <input
-          type="color"
-          value={style?.fillColor ?? DEFAULT_FILL}
-          disabled={disabled || !hasFill}
-          onChange={(event) => onStyleChange({ fillColor: event.target.value, noFill: false })}
-        />
-      </label>
-      <button
-        type="button"
-        disabled={disabled || !hasFill}
-        aria-pressed={style?.noFill === true}
-        onClick={() => onStyleChange({ noFill: !style?.noFill })}
-      >
-        Sem preenchimento
-      </button>
+      <details className="shortcuts fill-menu" key={hasFill && !disabled ? "fill" : "fill-disabled"}>
+        <summary
+          aria-disabled={disabled || !hasFill}
+          tabIndex={disabled || !hasFill ? -1 : undefined}
+          onClick={(event) => {
+            if (disabled || !hasFill) event.preventDefault();
+          }}
+        >Preenchimento</summary>
+        <div className="shortcut-list">
+          <label className="tool-color">
+            Cor do preenchimento
+            <input
+              type="color"
+              value={style?.fillColor ?? DEFAULT_FILL}
+              disabled={disabled || !hasFill}
+              onChange={(event) => onStyleChange({ fillColor: event.target.value, noFill: false })}
+            />
+          </label>
+          <button
+            type="button"
+            disabled={disabled || !hasFill || !style?.noFill}
+            onClick={() => onStyleChange({ fillColor: style?.fillColor ?? DEFAULT_FILL, noFill: false })}
+          >Aplicar cor</button>
+          <button
+            type="button"
+            disabled={disabled || !hasFill}
+            aria-pressed={style?.noFill === true}
+            onClick={() => onStyleChange({ noFill: true })}
+          >Sem preenchimento</button>
+        </div>
+      </details>
       <label className="tool-color compact-style">
         Fonte
         <select

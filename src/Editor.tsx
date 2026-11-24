@@ -28,7 +28,7 @@ export function Editor({ storage, server, deleting, navigation }: {
 }) {
   const [tool, setTool] = useState<Tool>("select");
   const [styles, setStyles] = useState<Record<Exclude<Tool, "select" | "erase">, ElementStyle>>({
-    rectangle: {}, circle: {}, arrow: {}, text: {},
+    rectangle: { noFill: true }, circle: { noFill: true }, arrow: {}, text: {},
   });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [zoom, setZoom] = useState(100);

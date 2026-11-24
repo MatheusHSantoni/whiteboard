@@ -31,7 +31,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   const shortcuts = page.getByText("Atalhos", { exact: true });
   await shortcuts.focus();
   await page.keyboard.press("Enter");
-  const shortcutList = page.locator(".shortcut-list");
+  const shortcutList = page.locator("dl.shortcut-list");
   await expect(shortcutList).toBeVisible();
   await expect(shortcutList.locator("kbd")).toHaveText([
     "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + T", "Alt + arrastar", "Ctrl + clique", "Delete", "Enter", "Shift + Enter", "Esc",
@@ -49,7 +49,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
 
   const color = page.getByLabel("Cor da ferramenta");
   await expect(color).toBeDisabled();
-  for (const label of ["Preenchimento", "Fonte", "Tamanho"]) {
+  for (const label of ["Fonte", "Tamanho"]) {
     const control = page.getByLabel(label);
     await expect(control).toBeVisible();
     await expect(control).toBeDisabled();
@@ -89,7 +89,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   await expect(editor).toHaveCount(0);
 
   await page.keyboard.press("Alt+v");
-  await drag(page, canvas, { x: 60, y: 65 }, { x: 80, y: 95 });
+  await drag(page, canvas, { x: 45, y: 65 }, { x: 65, y: 95 });
   await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
     expect.objectContaining({ type: "rectangle", x: 65, y: 80, width: 60, height: 55, color: "#dc2638" }),
@@ -99,10 +99,13 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
 
   await page.reload();
   await expect(page.getByText("Clique em um elemento ou arraste numa área vazia para selecionar vários.")).toBeVisible();
-  await drag(page, canvas, { x: 80, y: 95 }, { x: 110, y: 95 });
+  await drag(page, canvas, { x: 65, y: 95 }, { x: 95, y: 95 });
   await expect(color).toHaveValue("#dc2638");
   await color.fill("#214bd5");
-  await page.getByLabel("Preenchimento").fill("#ffec9a");
+  const fillMenu = page.getByText("Preenchimento", { exact: true });
+  await fillMenu.click();
+  await page.getByLabel("Cor do preenchimento").fill("#ffec9a");
+  await fillMenu.click();
 
   await canvas.click({ position: { x: 90, y: 190 } });
   await canvas.dblclick({ position: { x: 90, y: 190 } });
@@ -174,9 +177,17 @@ test("desenha, salva e seleciona um círculo após recarregar", async ({ page })
   const canvas = page.locator("canvas").first();
 
   await page.keyboard.press("Alt+c");
-  const fill = page.getByLabel("Preenchimento");
-  await fill.fill("#ffec9a");
+  const fillMenu = page.getByText("Preenchimento", { exact: true });
+  const fill = page.getByLabel("Cor do preenchimento");
   await drag(page, canvas, { x: 100, y: 100 }, { x: 130, y: 140 });
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "circle", noFill: true }),
+  ]);
+  await page.keyboard.press("Alt+v");
+  await canvas.click({ position: { x: 150, y: 100 } });
+  await fillMenu.click();
+  await fill.fill("#ffec9a");
+  await fillMenu.click();
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
     expect.objectContaining({ type: "circle", x: 100, y: 100, radius: 50, fillColor: "#ffec9a" }),
   ]);
@@ -184,6 +195,7 @@ test("desenha, salva e seleciona um círculo após recarregar", async ({ page })
   await page.reload();
   await expect(page.getByRole("button", { name: "Exportar Board" })).toBeEnabled();
   await canvas.click({ position: { x: 100, y: 100 } });
+  await fillMenu.click();
   await expect(fill).toHaveValue("#ffec9a");
   const noFill = page.getByRole("button", { name: "Sem preenchimento" });
   await noFill.click();
@@ -197,8 +209,10 @@ test("desenha, salva e seleciona um círculo após recarregar", async ({ page })
   await page.reload();
   await expect(page.getByRole("button", { name: "Exportar Board" })).toBeEnabled();
   await canvas.click({ position: { x: 150, y: 100 } });
+  await fillMenu.click();
   await expect(noFill).toHaveAttribute("aria-pressed", "true");
-  await noFill.click();
+  await page.getByRole("button", { name: "Aplicar cor" }).click();
+  await fillMenu.click();
   await expect.poll(() => canvas.evaluate((node) =>
     node.getContext("2d").getImageData(100, 100, 1, 1).data[3],
   )).toBe(255);
@@ -284,12 +298,12 @@ test("seleciona por arraste, alterna com Ctrl e move e apaga o conjunto", async 
   await drag(page, canvas, { x: 200, y: 120 }, { x: 20, y: 25 });
   const multiple = page.getByText(/2 elementos selecionados/);
   await expect(multiple).toBeVisible();
-  await canvas.click({ position: { x: 155, y: 75 }, modifiers: ["Control"] });
+  await canvas.click({ position: { x: 177, y: 75 }, modifiers: ["Control"] });
   await expect(multiple).toBeHidden();
-  await canvas.click({ position: { x: 155, y: 75 }, modifiers: ["Control"] });
+  await canvas.click({ position: { x: 177, y: 75 }, modifiers: ["Control"] });
   await expect(multiple).toBeVisible();
 
-  await drag(page, canvas, { x: 60, y: 65 }, { x: 90, y: 85 });
+  await drag(page, canvas, { x: 40, y: 65 }, { x: 70, y: 85 });
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
     expect.objectContaining({ type: "rectangle", x: 70, y: 70 }),
     expect.objectContaining({ type: "circle", x: 185, y: 95 }),

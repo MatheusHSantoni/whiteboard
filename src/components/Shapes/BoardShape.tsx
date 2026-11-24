@@ -1,8 +1,9 @@
 import "konva/lib/shapes/Arrow.js";
 import "konva/lib/shapes/Text.js";
 import "konva/lib/shapes/Circle.js";
+import "konva/lib/shapes/Line.js";
 import { useState } from "react";
-import { Arrow, Circle, Group, Rect, Text } from "react-konva/lib/ReactKonvaCore.js";
+import { Arrow, Circle, Group, Line, Rect, Text } from "react-konva/lib/ReactKonvaCore.js";
 import { DEFAULT_DRAWING_COLOR, DEFAULT_FILL, DEFAULT_FONT_SIZE, FONTS, resizeShape, type Point, type Shape } from "../../types/shapes";
 import BoardImage from "./BoardImage";
 import Rectangle from "./Rectangle";
@@ -104,6 +105,28 @@ export default function BoardShape({
             setDragSize(undefined);
           }}
         />
+      )}
+      {(shape.type === "pencil" || shape.type === "marker") && (
+        shape.points.length === 2 ? (
+          <Circle
+            radius={shape.strokeWidth / 2}
+            fill={stroke}
+            opacity={shape.type === "marker" ? 0.42 : 1}
+            stroke={selected ? "#583ce0" : undefined}
+            strokeWidth={1}
+          />
+        ) : (
+          <Line
+            points={shape.points}
+            stroke={stroke}
+            strokeWidth={shape.strokeWidth}
+            hitStrokeWidth={Math.max(12, shape.strokeWidth)}
+            opacity={shape.type === "marker" ? 0.42 : 1}
+            lineCap="round"
+            lineJoin="round"
+            dash={selected ? [6, 4] : undefined}
+          />
+        )
       )}
       {shape.type === "text" && (
         <Text

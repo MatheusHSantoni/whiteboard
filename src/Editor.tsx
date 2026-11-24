@@ -5,7 +5,7 @@ import Whiteboard from "./components/Canvas/Whiteboard";
 import Toolbar from "./components/Toolbar/Toolbar";
 import { readBoardImage } from "./utils/boardImage";
 import { useWhiteboard } from "./hooks/useWhiteboard";
-import { resizeShape, type ElementStyle, type Point, type Shape, type TextMark, type Tool } from "./types/shapes";
+import { MAX_STROKE_WIDTH, resizeShape, type FreehandTool, type ElementStyle, type Point, type Shape, type TextMark, type Tool } from "./types/shapes";
 
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 200;
@@ -13,6 +13,8 @@ const ZOOM_STEP = 25;
 
 const instructions: Record<Tool, string> = {
   select: "Clique em um elemento ou arraste numa área vazia para selecionar vários.",
+  pencil: "Arraste para desenhar livremente.",
+  marker: "Arraste para destacar uma área da lousa.",
   erase: "Clique em um elemento para apagar.",
   rectangle: "Clique e arraste para desenhar um retângulo.",
   circle: "Clique no centro e arraste para definir o raio do círculo.",
@@ -29,7 +31,9 @@ export function Editor({ storage, server, deleting, navigation }: {
   const [tool, setTool] = useState<Tool>("select");
   const [styles, setStyles] = useState<Record<Exclude<Tool, "select" | "erase">, ElementStyle>>({
     rectangle: { noFill: true }, circle: { noFill: true }, arrow: {}, text: {},
+    pencil: {}, marker: { color: "#fff176" },
   });
+  const [strokeWidths, setStrokeWidths] = useState({ pencil: 3, marker: 18 });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [zoom, setZoom] = useState(100);
   const [imageError, setImageError] = useState("");
@@ -47,6 +51,17 @@ export function Editor({ storage, server, deleting, navigation }: {
   const selected = tool === "select" && selectedIds.length === 1
     ? board.shapes.find(({ id }) => id === selectedIds[0]) : undefined;
   const drawingStyle = tool === "select" || tool === "erase" ? undefined : styles[tool];
+
+  const freehand = tool === "pencil" || tool === "marker" ? tool : undefined;
+  const strokeWidth = freehand ? strokeWidths[freehand] : undefined;
+
+  function changeStrokeWidth(tool: FreehandTool, direction: number) {
+    const step = tool === "marker" ? 2 : 1;
+    setStrokeWidths((current) => ({
+      ...current,
+      [tool]: Math.max(1, Math.min(MAX_STROKE_WIDTH, current[tool] + direction * step)),
+    }));
+  }
 
   function changeStyle(patch: ElementStyle) {
     if (tool !== "select" && tool !== "erase") {
@@ -140,6 +155,7 @@ export function Editor({ storage, server, deleting, navigation }: {
         onImportImage={(file) => void importImage(file)}
         importing={importing}
         onStyleChange={changeStyle}
+        onStrokeWidthChange={changeStrokeWidth}
         onDelete={tool === "select" && selectedIds.length ? () => eraseShapes(selectedIds) : undefined}
       />
       {!disabled && (
@@ -151,6 +167,7 @@ export function Editor({ storage, server, deleting, navigation }: {
             selected?.type === "image" ? "Arraste a alça no canto da imagem para redimensionar." :
             selected && ["square", "rectangle", "circle"].includes(selected.type)
               ? "Arraste a alça roxa para redimensionar a forma." : instructions[tool]}
+          {strokeWidth !== undefined && ` Espessura: ${strokeWidth} px (+ / −).`}
         </p>
       )}
       {imageError && <p className="message" role="alert">{imageError}</p>}
@@ -172,6 +189,7 @@ export function Editor({ storage, server, deleting, navigation }: {
         <Whiteboard
           tool={tool}
           drawingStyle={drawingStyle}
+          strokeWidth={strokeWidth}
           scale={zoom / 100}
           onErase={(id) => eraseShapes([id])}
           selectedIds={selectedIds}

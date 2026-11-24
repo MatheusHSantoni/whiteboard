@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import {
   DEFAULT_DRAWING_COLOR, DEFAULT_FILL, DEFAULT_FONT_SIZE, FONTS, FONT_SIZES,
-  IMAGE_TYPES, type ElementStyle, type Shape, type Tool,
+  IMAGE_TYPES, type ElementStyle, type FreehandTool, type Shape, type Tool,
 } from "../../types/shapes";
 
 const tools = [
@@ -9,6 +9,8 @@ const tools = [
   { id: "rectangle", label: "Retângulo", icon: "▭", key: "S" },
   { id: "circle", label: "Círculo", icon: "○", key: "C" },
   { id: "arrow", label: "Seta", icon: "↗", key: "A" },
+  { id: "pencil", label: "Lápis", icon: "✎", key: "P" },
+  { id: "marker", label: "Marca-texto", icon: "▰", key: "M" },
   { id: "text", label: "Texto", icon: "T", key: "T" },
 ] as const;
 
@@ -21,20 +23,29 @@ type ToolbarProps = {
   onImportImage: (file: File) => void;
   importing: boolean;
   onStyleChange: (patch: ElementStyle) => void;
+  onStrokeWidthChange: (tool: FreehandTool, direction: number) => void;
   onDelete?: () => void;
 };
 
 export default function Toolbar({
-  activeTool, onToolChange, disabled, style, styleType, onStyleChange, onDelete, onImportImage, importing,
+  activeTool, onToolChange, disabled, style, styleType, onStyleChange, onStrokeWidthChange, onDelete, onImportImage, importing,
 }: ToolbarProps) {
   const hasFill = styleType === "square" || styleType === "rectangle" || styleType === "circle";
 
   useEffect(() => {
     function handleShortcut(event: KeyboardEvent) {
       if (disabled || event.defaultPrevented || event.ctrlKey ||
-          event.metaKey || event.shiftKey || event.repeat) return;
+          event.metaKey) return;
       if (event.target instanceof HTMLElement &&
           (event.target.isContentEditable || event.target.closest("input, textarea, select"))) return;
+
+      if ((activeTool === "pencil" || activeTool === "marker") && !event.altKey &&
+          (event.key === "+" || event.key === "-")) {
+        event.preventDefault();
+        onStrokeWidthChange(activeTool, event.key === "+" ? 1 : -1);
+        return;
+      }
+      if (event.shiftKey || event.repeat) return;
 
       if (event.key === "Delete" && !event.altKey && onDelete) {
         event.preventDefault();
@@ -51,7 +62,7 @@ export default function Toolbar({
 
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [disabled, onToolChange, onDelete]);
+  }, [activeTool, disabled, onToolChange, onDelete, onStrokeWidthChange]);
 
   return (
     <nav className="toolbar" aria-label="Ferramentas do quadro">
@@ -91,6 +102,10 @@ export default function Toolbar({
             <dd><kbd>Ctrl + clique</kbd></dd>
           </div>
           <div>
+            <dt>Ajustar espessura do lápis ou marca-texto</dt>
+            <dd><kbd>+ / −</kbd></dd>
+          </div>
+          <div>
             <dt>Apagar seleção</dt>
             <dd><kbd>Delete</kbd></dd>
           </div>
@@ -108,6 +123,16 @@ export default function Toolbar({
           </div>
         </dl>
       </details>
+      {tools.filter(({ id }) => id === "pencil" || id === "marker").map(({ id, label, icon, key }) => (
+        <button
+          key={id}
+          type="button"
+          disabled={disabled}
+          aria-pressed={activeTool === id}
+          aria-keyshortcuts={`Alt+${key}`}
+          onClick={() => onToolChange(id)}
+        ><span aria-hidden="true">{icon}</span>{label}</button>
+      ))}
       <button
         type="button"
         className="eraser-button"

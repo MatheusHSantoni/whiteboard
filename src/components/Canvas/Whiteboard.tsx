@@ -4,7 +4,7 @@ import type { KonvaEventObject } from "konva/lib/Node";
 import { Layer, Rect, Stage } from "react-konva/lib/ReactKonvaCore.js";
 import BoardShape from "../Shapes/BoardShape";
 import InlineTextEditor from "./InlineTextEditor";
-import { createDrawing, DEFAULT_FONT_SIZE, FONTS, type TextMark, type DrawingTool, type ElementStyle, type Point, type Shape, type Tool } from "../../types/shapes";
+import { createDrawing, DEFAULT_FONT_SIZE, FONTS, MAX_STROKE_POINTS, type FreehandTool, type TextMark, type DrawingTool, type ElementStyle, type Point, type Shape, type Tool } from "../../types/shapes";
 
 type Gesture = {
   pointerId: number;
@@ -12,9 +12,28 @@ type Gesture = {
   current: Point;
 } & (
   | { type: DrawingTool; style?: ElementStyle }
+  | { type: FreehandTool; style?: ElementStyle; points: number[]; strokeWidth: number }
   | { type: "move"; ids: string[]; clickedId: string }
   | { type: "marquee" }
 );
+
+type StrokeGesture = Extract<Gesture, { points: number[] }>;
+
+function addStrokePoint(gesture: StrokeGesture, point: Point) {
+  const { points, start } = gesture;
+  const x = point.x - start.x;
+  const y = point.y - start.y;
+  if (points.length >= MAX_STROKE_POINTS * 2 ||
+      Math.hypot(x - points[points.length - 2], y - points[points.length - 1]) < 0.5) return points;
+  return [...points, x, y];
+}
+
+function makeStroke(gesture: StrokeGesture, id: string, points: number[]): Shape {
+  return {
+    id, type: gesture.type, ...gesture.start, ...gesture.style,
+    points, strokeWidth: gesture.strokeWidth,
+  };
+}
 
 type PanGesture = {
   pointerId: number;
@@ -25,6 +44,7 @@ type PanGesture = {
 type WhiteboardProps = {
   tool: Tool;
   drawingStyle?: ElementStyle;
+  strokeWidth?: number;
   scale: number;
   onErase: (id: string) => void;
   selectedIds: string[];
@@ -49,7 +69,7 @@ function selectionBounds(start: Point, end: Point) {
 }
 
 export default function Whiteboard({
-  tool, drawingStyle, scale, onErase, selectedIds, onSelect, shapes, disabled, onAdd, onTextEdit, onMove, onImageResize, onResize, onArrowBend,
+  tool, drawingStyle, strokeWidth, scale, onErase, selectedIds, onSelect, shapes, disabled, onAdd, onTextEdit, onMove, onImageResize, onResize, onArrowBend,
 }: WhiteboardProps) {
   const layer = useRef<KonvaLayer>(null);
   const container = useRef<HTMLDivElement>(null);
@@ -109,6 +129,8 @@ export default function Whiteboard({
         onSelect(ids);
         setGesture({ ...base, type: "move", ids, clickedId: shapeId });
       }
+    } else if (tool === "pencil" || tool === "marker") {
+      setGesture({ ...base, type: tool, style: drawingStyle, points: [0, 0], strokeWidth: strokeWidth ?? 3 });
     } else {
       setGesture({ ...base, type: tool, style: drawingStyle });
     }
@@ -121,7 +143,13 @@ export default function Whiteboard({
   function updateGesture(event: KonvaEventObject<PointerEvent>) {
     if (!gesture || event.evt.pointerId !== gesture.pointerId) return;
     const current = layer.current?.getRelativePointerPosition();
-    if (current) setGesture({ ...gesture, current });
+    if (!current) return;
+    setGesture((active) => {
+      if (!active || active.pointerId !== event.evt.pointerId) return active;
+      if (!("points" in active)) return { ...active, current };
+      const points = addStrokePoint(active, current);
+      return points === active.points ? active : { ...active, points, current };
+    });
   }
 
   function finishGesture(event: KonvaEventObject<PointerEvent>) {
@@ -151,13 +179,20 @@ export default function Whiteboard({
       return;
     }
 
+    if ("points" in gesture) {
+      onAdd(makeStroke(gesture, crypto.randomUUID(), addStrokePoint(gesture, current)));
+      return;
+    }
+
     const shape = createDrawing(crypto.randomUUID(), gesture.type, gesture.start, current);
     if (shape) onAdd({ ...shape, ...gesture.style });
   }
 
   const drawing = gesture?.type === "move" || gesture?.type === "marquee" ? null : gesture;
   const preview = drawing
-    ? createDrawing("preview", drawing.type, drawing.start, drawing.current)
+    ? "points" in drawing
+      ? makeStroke(drawing, "preview", drawing.points)
+      : createDrawing("preview", drawing.type, drawing.start, drawing.current)
     : null;
   const moving = gesture?.type === "move" ? gesture : null;
   const marquee = gesture?.type === "marquee" ? selectionBounds(gesture.start, gesture.current) : null;

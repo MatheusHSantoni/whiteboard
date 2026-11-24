@@ -34,7 +34,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   const shortcutList = page.locator("dl.shortcut-list");
   await expect(shortcutList).toBeVisible();
   await expect(shortcutList.locator("kbd")).toHaveText([
-    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + T", "Alt + arrastar", "Ctrl + clique", "Delete", "Enter", "Shift + Enter", "Esc",
+    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + P", "Alt + M", "Alt + T", "Alt + arrastar", "Ctrl + clique", "+ / −", "Delete", "Enter", "Shift + Enter", "Esc",
   ]);
   await page.keyboard.press("Enter");
   await expect(shortcutList).toBeHidden();
@@ -310,4 +310,31 @@ test("seleciona por arraste, alterna com Ctrl e move e apaga o conjunto", async 
   ]);
   await page.keyboard.press("Delete");
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([]);
+});
+
+test("desenha à mão livre com lápis e marca-texto e ajusta a espessura pelo teclado", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  const canvas = page.locator("canvas").first();
+  await page.keyboard.press("Alt+p");
+  await expect(page.getByRole("button", { name: "Lápis" })).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Shift+Equal");
+  await expect(page.getByText(/Espessura: 4 px/)).toBeVisible();
+  await drag(page, canvas, { x: 40, y: 50 }, { x: 100, y: 90 });
+
+  await page.keyboard.press("Alt+m");
+  await expect(page.getByRole("button", { name: "Marca-texto", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await page.keyboard.press("Minus");
+  await expect(page.getByText(/Espessura: 16 px/)).toBeVisible();
+  await drag(page, canvas, { x: 45, y: 130 }, { x: 125, y: 130 });
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "pencil", x: 40, y: 50, strokeWidth: 4 }),
+    expect.objectContaining({ type: "marker", x: 45, y: 130, strokeWidth: 16, color: "#fff176" }),
+  ]);
+
+  await page.reload();
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  await expect.poll(() => canvas.evaluate((node) =>
+    node.getContext("2d").getImageData(80, 130, 1, 1).data[3],
+  )).toBeGreaterThan(0);
 });

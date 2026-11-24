@@ -221,7 +221,7 @@ button:focus-visible {
 .board-stage { position: absolute; inset: 0; }
 .quadro--rectangle, .quadro--circle, .quadro--arrow { cursor: crosshair; }
 .quadro--text { cursor: text; }
-.quadro--erase { cursor: crosshair; }
+.quadro--erase, .quadro--pencil, .quadro--marker { cursor: crosshair; }
 .quadro--panning { cursor: grabbing; }
 
 .inline-text-editor {

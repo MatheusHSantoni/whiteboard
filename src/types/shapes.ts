@@ -1,6 +1,10 @@
 export type Point = { x: number; y: number };
 export type DrawingTool = "rectangle" | "circle" | "arrow";
-export type Tool = "select" | "erase" | "text" | DrawingTool;
+export type FreehandTool = "pencil" | "marker";
+export type Tool = "select" | "erase" | "text" | DrawingTool | FreehandTool;
+
+export const MAX_STROKE_POINTS = 8192;
+export const MAX_STROKE_WIDTH = 64;
 
 export const FONTS = {
   system: { label: "Sistema", stack: "system-ui, sans-serif" },
@@ -35,6 +39,7 @@ export type Shape = PositionedShape & (
   | { type: "arrow"; dx: number; dy: number; bend?: Point }
   | { type: "image"; src: string; width: number; height: number }
   | { type: "text"; text: string; marks?: TextMark[] }
+  | { type: FreehandTool; points: number[]; strokeWidth: number }
 );
 
 export const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -116,6 +121,13 @@ export function isShape(value: unknown): value is Shape {
         [shape.width, shape.height].every((size) =>
           typeof size === "number" && size > 0 && size <= MAX_IMAGE_DIMENSION,
         );
+    case "pencil":
+    case "marker":
+      return typeof shape.strokeWidth === "number" && shape.strokeWidth >= 1 &&
+        shape.strokeWidth <= MAX_STROKE_WIDTH &&
+        Array.isArray(shape.points) && shape.points.length >= 2 &&
+        shape.points.length <= MAX_STROKE_POINTS * 2 && shape.points.length % 2 === 0 &&
+        shape.points.every(Number.isFinite);
     case "text":
       return typeof shape.text === "string" && shape.text.length <= MAX_TEXT_LENGTH &&
         shape.text.trim().length > 0 && validTextMarks(shape.marks, shape.text.length);

@@ -158,6 +158,7 @@ export function Editor({ storage, server, deleting, navigation }: {
         onStyleChange={changeStyle}
         onStrokeWidthChange={changeStrokeWidth}
         onUndo={board.canUndo ? board.undo : undefined}
+        onRedo={board.canRedo ? board.redo : undefined}
         onDelete={tool === "select" && selectedIds.length ? () => eraseShapes(selectedIds) : undefined}
       />
       {!disabled && (

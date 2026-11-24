@@ -34,7 +34,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   const shortcutList = page.locator("dl.shortcut-list");
   await expect(shortcutList).toBeVisible();
   await expect(shortcutList.locator("kbd")).toHaveText([
-    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + P", "Alt + M", "Alt + B", "Alt + T", "Ctrl + arrastar", "Shift + clique", "+ / −", "Ctrl + Z", "Delete", "Enter", "Shift + Enter", "Esc",
+    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + P", "Alt + M", "Alt + B", "Alt + T", "Ctrl + arrastar", "Shift + clique", "+ / −", "Ctrl + Z", "Ctrl + Y", "Delete", "Enter", "Shift + Enter", "Esc",
   ]);
   await page.keyboard.press("Enter");
   await expect(shortcutList).toBeHidden();
@@ -319,6 +319,8 @@ test("seleciona por arraste, alterna com Shift e move e apaga o conjunto", async
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([]);
   await page.keyboard.press("Control+z");
   await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(2);
+  await page.keyboard.press("Control+y");
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([]);
 });
 
 test("desenha à mão livre com lápis e marca-texto e ajusta a espessura pelo teclado", async ({ page }) => {

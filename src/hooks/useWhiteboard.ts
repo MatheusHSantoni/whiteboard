@@ -4,10 +4,10 @@ import type { BoardStorage } from "../utils/boardLibrary";
 
 const HISTORY_LIMIT = 50;
 
-type BoardHistory = { shapes: Shape[]; previous: Shape[][]; group?: symbol };
+type BoardHistory = { shapes: Shape[]; previous: Shape[][]; next: Shape[][]; group?: symbol };
 
 export function useWhiteboard(storage: BoardStorage) {
-  const [{ shapes, previous }, setHistory] = useState<BoardHistory>({ shapes: [], previous: [] });
+  const [{ shapes, previous, next }, setHistory] = useState<BoardHistory>({ shapes: [], previous: [], next: [] });
   const [savedShapes, setSavedShapes] = useState<Shape[]>(shapes);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -21,7 +21,7 @@ export function useWhiteboard(storage: BoardStorage) {
 
     storage.load().then((storedShapes) => {
       if (!active) return;
-      setHistory({ shapes: storedShapes, previous: [] });
+      setHistory({ shapes: storedShapes, previous: [], next: [] });
       setSavedShapes(storedShapes);
     }).catch((error: unknown) => {
       if (!active) return;
@@ -62,6 +62,7 @@ export function useWhiteboard(storage: BoardStorage) {
         shapes: next,
         previous: group && group === history.group ? history.previous :
           [...history.previous.slice(-(HISTORY_LIMIT - 1)), history.shapes],
+        next: [],
         group,
       };
     });
@@ -71,7 +72,15 @@ export function useWhiteboard(storage: BoardStorage) {
     setHistory((history) => {
       const last = history.previous.at(-1);
       if (!last) return history;
-      return { shapes: last, previous: history.previous.slice(0, -1) };
+      return { shapes: last, previous: history.previous.slice(0, -1), next: [...history.next, history.shapes] };
+    });
+  }
+
+  function redo() {
+    setHistory((history) => {
+      const next = history.next.at(-1);
+      if (!next) return history;
+      return { shapes: next, previous: [...history.previous, history.shapes], next: history.next.slice(0, -1) };
     });
   }
 
@@ -83,6 +92,7 @@ export function useWhiteboard(storage: BoardStorage) {
 
   return {
     shapes, setShapes, retryLoad, loading, loadFailed, undo, canUndo: previous.length > 0,
+    redo, canRedo: next.length > 0,
     saveFailed: shapes === saveFailure?.shapes,
     saveError: saveFailure?.message ?? "",
     retrySave: () => setSaveFailure(null),

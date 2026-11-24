@@ -29,10 +29,11 @@ type ToolbarProps = {
   onStrokeWidthChange: (tool: FreehandTool, direction: number) => void;
   onDelete?: () => void;
   onUndo?: () => void;
+  onRedo?: () => void;
 };
 
 export default function Toolbar({
-  activeTool, onToolChange, disabled, style, styleType, onStyleChange, onStrokeWidthChange, onDelete, onUndo, onImportImage, importing,
+  activeTool, onToolChange, disabled, style, styleType, onStyleChange, onStrokeWidthChange, onDelete, onUndo, onRedo, onImportImage, importing,
 }: ToolbarProps) {
   const hasFill = styleType === "square" || styleType === "rectangle" || styleType === "circle";
 
@@ -42,11 +43,14 @@ export default function Toolbar({
       const target = event.target instanceof HTMLElement ? event.target : null;
       if (target?.isContentEditable || target?.closest("textarea, input:not([type=color]):not([type=file])")) return;
 
-      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey &&
-          event.key.toLowerCase() === "z" && onUndo) {
-        event.preventDefault();
-        onUndo();
-        return;
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
+        const key = event.key.toLowerCase();
+        const action = key === "z" ? onUndo : key === "y" ? onRedo : undefined;
+        if (action) {
+          event.preventDefault();
+          action();
+          return;
+        }
       }
       if (event.ctrlKey || event.metaKey || target?.closest("input, select")) return;
 
@@ -73,7 +77,7 @@ export default function Toolbar({
 
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [activeTool, disabled, onToolChange, onDelete, onUndo, onStrokeWidthChange]);
+  }, [activeTool, disabled, onToolChange, onDelete, onUndo, onRedo, onStrokeWidthChange]);
 
   return (
     <nav className="toolbar" aria-label="Ferramentas do quadro">
@@ -119,6 +123,10 @@ export default function Toolbar({
           <div>
             <dt>Desfazer última edição</dt>
             <dd><kbd>Ctrl + Z</kbd></dd>
+          </div>
+          <div>
+            <dt>Refazer edição desfeita</dt>
+            <dd><kbd>Ctrl + Y</kbd></dd>
           </div>
           <div>
             <dt>Apagar seleção</dt>

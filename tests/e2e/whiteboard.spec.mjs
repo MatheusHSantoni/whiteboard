@@ -105,6 +105,14 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   await page.getByLabel("Preenchimento").fill("#ffec9a");
 
   await canvas.click({ position: { x: 90, y: 190 } });
+  await canvas.dblclick({ position: { x: 90, y: 190 } });
+  await expect(editor).toHaveValue("Meu primeiro quadro");
+  await editor.fill("Rascunho descartado");
+  await editor.press("Escape");
+  await canvas.dblclick({ position: { x: 90, y: 190 } });
+  await expect(editor).toHaveValue("Meu primeiro quadro");
+  await editor.fill("Texto atualizado");
+  await editor.press("Enter");
   const font = page.getByLabel("Fonte");
   await expect(font.locator("option[value=verdana]")).toHaveText("Verdana");
   await font.selectOption("handwriting");
@@ -113,7 +121,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
     expect.objectContaining({ type: "rectangle", x: 95, y: 80, width: 60, height: 55, color: "#214bd5", fillColor: "#ffec9a" }),
     expect.objectContaining({ type: "arrow" }),
-    expect.objectContaining({ type: "text", font: "handwriting", fontSize: 32 }),
+    expect.objectContaining({ type: "text", text: "Texto atualizado", x: 75, y: 180, font: "handwriting", fontSize: 32 }),
   ]);
 
   await canvas.click({ position: { x: 90, y: 190 } });

@@ -88,6 +88,10 @@ export function Editor({ storage, server, deleting, navigation }: {
     ));
   }
 
+  function editText(id: string, text: string) {
+    updateShape(id, (shape) => shape.type === "text" && shape.text !== text ? { ...shape, text } : shape);
+  }
+
   function changeArrowBend(id: string, bend: Point) {
     updateShape(id, (shape) => shape.type === "arrow" ? { ...shape, bend } : shape);
   }
@@ -142,7 +146,8 @@ export function Editor({ storage, server, deleting, navigation }: {
         <p className="instructions">
           {tool === "select" && selectedIds.length > 1
             ? `${selectedIds.length} elementos selecionados. Arraste para mover ou pressione Delete.`
-            : selected?.type === "arrow" ? "Arraste a ponta roxa para redimensionar a seta ou o ponto branco para ajustar a curva." :
+            : selected?.type === "text" ? "Dê dois cliques no texto para editar." :
+            selected?.type === "arrow" ? "Arraste a ponta roxa para redimensionar a seta ou o ponto branco para ajustar a curva." :
             selected?.type === "image" ? "Arraste a alça no canto da imagem para redimensionar." :
             selected && ["square", "rectangle", "circle"].includes(selected.type)
               ? "Arraste a alça roxa para redimensionar a forma." : instructions[tool]}
@@ -174,6 +179,7 @@ export function Editor({ storage, server, deleting, navigation }: {
           shapes={board.shapes}
           disabled={disabled}
           onAdd={addShape}
+          onTextEdit={editText}
           onMove={moveShapes}
           onImageResize={changeImageSize}
           onResize={changeShapeSize}

@@ -31,6 +31,7 @@ type WhiteboardProps = {
   shapes: Shape[];
   disabled: boolean;
   onAdd: (shape: Shape) => void;
+  onTextEdit: (id: string, text: string) => void;
   onMove: (ids: string[], delta: Point) => void;
   onImageResize: (id: string, width: number, height: number) => void;
   onResize: (id: string, point: Point) => void;
@@ -47,7 +48,7 @@ function selectionBounds(start: Point, end: Point) {
 }
 
 export default function Whiteboard({
-  tool, drawingStyle, scale, onErase, selectedIds, onSelect, shapes, disabled, onAdd, onMove, onImageResize, onResize, onArrowBend,
+  tool, drawingStyle, scale, onErase, selectedIds, onSelect, shapes, disabled, onAdd, onTextEdit, onMove, onImageResize, onResize, onArrowBend,
 }: WhiteboardProps) {
   const layer = useRef<KonvaLayer>(null);
   const container = useRef<HTMLDivElement>(null);
@@ -56,7 +57,7 @@ export default function Whiteboard({
   const panGesture = useRef<PanGesture | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [gesture, setGesture] = useState<Gesture | null>(null);
-  const [textPosition, setTextPosition] = useState<(Point & ElementStyle) | null>(null);
+  const [textPosition, setTextPosition] = useState<(Point & ElementStyle & { id?: string }) | null>(null);
   const [text, setText] = useState("");
 
   useEffect(() => {
@@ -203,13 +204,24 @@ export default function Whiteboard({
       <Stage
         className="board-stage"
         {...dimensions}
+        onDblClick={(event) => {
+          if (disabled || tool !== "select" || textPosition || event.evt.button !== 0) return;
+          const id = event.target.findAncestor(".board-shape")?.id();
+          const shape = shapes.find((item) => item.id === id);
+          if (shape?.type !== "text") return;
+
+          const { id: textId, x, y, color, font, fontSize } = shape;
+          onSelect([textId]);
+          setText(shape.text);
+          setTextPosition({ id: textId, x, y, color, font, fontSize });
+        }}
         onPointerDown={startGesture}
         onPointerMove={updateGesture}
         onPointerUp={finishGesture}
         onPointerCancel={() => setGesture(null)}
       >
         <Layer ref={layer} x={offset.x} y={offset.y} scaleX={scale} scaleY={scale}>
-          {shapes.map((shape) => (
+          {shapes.filter((shape) => shape.id !== textPosition?.id).map((shape) => (
             <BoardShape
               key={shape.id}
               shape={moving?.ids.includes(shape.id) ? {
@@ -242,6 +254,7 @@ export default function Whiteboard({
             fontSize: textPosition.fontSize ?? DEFAULT_FONT_SIZE,
           }}
           autoFocus
+          onFocus={(event) => event.currentTarget.setSelectionRange(text.length, text.length)}
           rows={1}
           maxLength={MAX_TEXT_LENGTH}
           value={text}
@@ -249,7 +262,9 @@ export default function Whiteboard({
           onBlur={() => {
             const content = text.trim();
             if (content) {
-              onAdd({ id: crypto.randomUUID(), type: "text", ...textPosition, text: content });
+              const { id, ...position } = textPosition;
+              if (id) onTextEdit(id, content);
+              else onAdd({ id: crypto.randomUUID(), type: "text", ...position, text: content });
             }
             setTextPosition(null);
           }}

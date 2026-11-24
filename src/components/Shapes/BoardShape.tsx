@@ -122,7 +122,7 @@ export default function BoardShape({
             strokeWidth={shape.strokeWidth}
             hitStrokeWidth={Math.max(12, shape.strokeWidth)}
             opacity={shape.type === "marker" ? 0.42 : 1}
-            lineCap="round"
+            lineCap={shape.type === "marker" ? "butt" : "round"}
             lineJoin="round"
             dash={selected ? [6, 4] : undefined}
           />

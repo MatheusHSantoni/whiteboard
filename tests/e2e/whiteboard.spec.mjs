@@ -318,12 +318,14 @@ test("desenha à mão livre com lápis e marca-texto e ajusta a espessura pelo t
   const canvas = page.locator("canvas").first();
   await page.keyboard.press("Alt+p");
   await expect(page.getByRole("button", { name: "Lápis" })).toHaveAttribute("aria-pressed", "true");
+  await expect(canvas).toHaveCSS("cursor", /url\(.+\) 3 21, crosshair/);
   await page.keyboard.press("Shift+Equal");
   await expect(page.getByText(/Espessura: 4 px/)).toBeVisible();
   await drag(page, canvas, { x: 40, y: 50 }, { x: 100, y: 90 });
 
   await page.keyboard.press("Alt+m");
   await expect(page.getByRole("button", { name: "Marca-texto", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(canvas).toHaveCSS("cursor", /url\(.+\) 4 21, crosshair/);
   await page.keyboard.press("Minus");
   await expect(page.getByText(/Espessura: 16 px/)).toBeVisible();
   await drag(page, canvas, { x: 45, y: 130 }, { x: 125, y: 130 });
@@ -337,4 +339,11 @@ test("desenha à mão livre com lápis e marca-texto e ajusta a espessura pelo t
   await expect.poll(() => canvas.evaluate((node) =>
     node.getContext("2d").getImageData(80, 130, 1, 1).data[3],
   )).toBeGreaterThan(0);
+  await page.getByRole("button", { name: "Borracha" }).click();
+  const bounds = await canvas.boundingBox();
+  await page.mouse.move(bounds.x + 80, bounds.y + 40);
+  await page.mouse.down();
+  await page.mouse.move(bounds.x + 80, bounds.y + 160);
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([]);
+  await page.mouse.up();
 });

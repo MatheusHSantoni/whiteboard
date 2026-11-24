@@ -35,6 +35,13 @@ function makeStroke(gesture: StrokeGesture, id: string, points: number[]): Shape
   };
 }
 
+type EraseGesture = {
+  pointerId: number;
+  previous: Point;
+  erased: Set<string>;
+  refreshHitCanvas: boolean;
+};
+
 type PanGesture = {
   pointerId: number;
   start: Point;
@@ -46,7 +53,7 @@ type WhiteboardProps = {
   drawingStyle?: ElementStyle;
   strokeWidth?: number;
   scale: number;
-  onErase: (id: string) => void;
+  onErase: (ids: string[]) => void;
   selectedIds: string[];
   onSelect: (ids: string[]) => void;
   shapes: Shape[];
@@ -76,6 +83,7 @@ export default function Whiteboard({
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);
   const panGesture = useRef<PanGesture | null>(null);
+  const eraseGesture = useRef<EraseGesture | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [gesture, setGesture] = useState<Gesture | null>(null);
   const [textPosition, setTextPosition] = useState<(Point & ElementStyle & { id?: string; text?: string; marks?: TextMark[] }) | null>(null);
@@ -96,8 +104,47 @@ export default function Whiteboard({
     setPanning(false);
   }
 
+  function eraseAlong(event: KonvaEventObject<PointerEvent>) {
+    const active = eraseGesture.current;
+    const canvasLayer = layer.current;
+    const point = canvasLayer?.getStage()?.getPointerPosition();
+    if (!active || active.pointerId !== event.evt.pointerId || !canvasLayer || !point) return;
+
+    const { previous, erased } = active;
+    const dx = point.x - previous.x;
+    const dy = point.y - previous.y;
+    if (!dx && !dy && event.evt.type !== "pointerdown") return;
+    if (active.refreshHitCanvas) {
+      // O canvas de interação pode conservar pixels de elementos removidos até o próximo quadro.
+      canvasLayer.drawHit();
+      active.refreshHitCanvas = false;
+    }
+    const steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 2));
+    const hits: string[] = [];
+    for (let index = 1; index <= steps; index++) {
+      const node = canvasLayer.getIntersection({
+        x: previous.x + dx * index / steps,
+        y: previous.y + dy * index / steps,
+      });
+      const id = node?.findAncestor(".board-shape")?.id();
+      if (id && !erased.has(id)) {
+        erased.add(id);
+        hits.push(id);
+      }
+    }
+    active.previous = point;
+    if (hits.length) {
+      active.refreshHitCanvas = true;
+      onErase(hits);
+    }
+  }
+
+  function stopErase(pointerId: number) {
+    if (eraseGesture.current?.pointerId === pointerId) eraseGesture.current = null;
+  }
+
   function startGesture(event: KonvaEventObject<PointerEvent>) {
-    if (disabled || gesture || textPosition || event.evt.button !== 0) return;
+    if (disabled || gesture || eraseGesture.current || textPosition || event.evt.button !== 0) return;
     const start = layer.current?.getRelativePointerPosition();
     if (!start) return;
 
@@ -109,7 +156,12 @@ export default function Whiteboard({
 
     const shapeId = event.target.findAncestor(".board-shape")?.id();
     if (tool === "erase") {
-      if (shapeId) onErase(shapeId);
+      const point = layer.current?.getStage()?.getPointerPosition();
+      if (!point) return;
+      const { pointerId, target } = event.evt;
+      eraseGesture.current = { pointerId, previous: point, erased: new Set(), refreshHitCanvas: false };
+      if (target instanceof Element) target.setPointerCapture(pointerId);
+      eraseAlong(event);
       return;
     }
 
@@ -141,6 +193,11 @@ export default function Whiteboard({
   }
 
   function updateGesture(event: KonvaEventObject<PointerEvent>) {
+    if (eraseGesture.current) {
+      if (event.evt.buttons & 1) eraseAlong(event);
+      else stopErase(event.evt.pointerId);
+      return;
+    }
     if (!gesture || event.evt.pointerId !== gesture.pointerId) return;
     const current = layer.current?.getRelativePointerPosition();
     if (!current) return;
@@ -153,6 +210,11 @@ export default function Whiteboard({
   }
 
   function finishGesture(event: KonvaEventObject<PointerEvent>) {
+    if (eraseGesture.current) {
+      eraseAlong(event);
+      stopErase(event.evt.pointerId);
+      return;
+    }
     if (!gesture || event.evt.pointerId !== gesture.pointerId) return;
     setGesture(null);
     const current = layer.current?.getRelativePointerPosition();
@@ -208,7 +270,7 @@ export default function Whiteboard({
         backgroundPosition: `${offset.x}px ${offset.y}px`,
       }}
       onPointerDownCapture={(event) => {
-        if (disabled || gesture || panGesture.current || !event.altKey || event.button !== 0) return;
+        if (disabled || gesture || eraseGesture.current || panGesture.current || !event.altKey || event.button !== 0) return;
         // Intercepta Alt + arrasto antes que o canvas inicie um desenho ou mova um elemento.
         event.preventDefault();
         event.stopPropagation();
@@ -228,10 +290,14 @@ export default function Whiteboard({
           y: pan.origin.y + event.clientY - pan.start.y,
         });
       }}
-      onPointerUp={(event) => stopPan(event.pointerId)}
+      onPointerUp={(event) => {
+        stopPan(event.pointerId);
+        stopErase(event.pointerId);
+      }}
       onPointerCancel={(event) => stopPan(event.pointerId)}
       onLostPointerCapture={(event) => {
         stopPan(event.pointerId);
+        stopErase(event.pointerId);
         if (gesture?.pointerId === event.pointerId) setGesture(null);
       }}
     >
@@ -251,7 +317,10 @@ export default function Whiteboard({
         onPointerDown={startGesture}
         onPointerMove={updateGesture}
         onPointerUp={finishGesture}
-        onPointerCancel={() => setGesture(null)}
+        onPointerCancel={(event) => {
+          stopErase(event.evt.pointerId);
+          setGesture(null);
+        }}
       >
         <Layer ref={layer} x={offset.x} y={offset.y} scaleX={scale} scaleY={scale}>
           {shapes.filter((shape) => shape.id !== textPosition?.id).map((shape) => (

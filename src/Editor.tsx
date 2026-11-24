@@ -15,7 +15,7 @@ const instructions: Record<Tool, string> = {
   select: "Clique em um elemento ou arraste numa área vazia para selecionar vários.",
   pencil: "Arraste para desenhar livremente.",
   marker: "Arraste para destacar uma área da lousa.",
-  erase: "Clique em um elemento para apagar.",
+  erase: "Clique ou arraste a borracha sobre os elementos para apagar.",
   rectangle: "Clique e arraste para desenhar um retângulo.",
   circle: "Clique no centro e arraste para definir o raio do círculo.",
   arrow: "Clique e arraste do início até a ponta da seta.",
@@ -191,7 +191,7 @@ export function Editor({ storage, server, deleting, navigation }: {
           drawingStyle={drawingStyle}
           strokeWidth={strokeWidth}
           scale={zoom / 100}
-          onErase={(id) => eraseShapes([id])}
+          onErase={eraseShapes}
           selectedIds={selectedIds}
           onSelect={setSelectedIds}
           shapes={board.shapes}

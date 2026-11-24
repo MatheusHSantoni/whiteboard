@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import pencilIcon from "../../assets/pencil.svg";
+import markerIcon from "../../assets/marker.svg";
 import {
   DEFAULT_DRAWING_COLOR, DEFAULT_FILL, DEFAULT_FONT_SIZE, FONTS, FONT_SIZES,
   IMAGE_TYPES, type ElementStyle, type FreehandTool, type Shape, type Tool,
@@ -123,19 +125,24 @@ export default function Toolbar({
           </div>
         </dl>
       </details>
-      {tools.filter(({ id }) => id === "pencil" || id === "marker").map(({ id, label, icon, key }) => (
+      {tools.filter(({ id }) => id === "pencil" || id === "marker").map(({ id, label, key }) => (
         <button
           key={id}
           type="button"
           disabled={disabled}
+          className="icon-tool-button"
+          aria-label={label}
+          title={label}
           aria-pressed={activeTool === id}
           aria-keyshortcuts={`Alt+${key}`}
           onClick={() => onToolChange(id)}
-        ><span aria-hidden="true">{icon}</span>{label}</button>
+        >
+          <img src={id === "pencil" ? pencilIcon : markerIcon} alt="" width={20} height={20} />
+        </button>
       ))}
       <button
         type="button"
-        className="eraser-button"
+        className="icon-tool-button"
         aria-label="Borracha"
         title="Borracha"
         aria-pressed={activeTool === "erase"}

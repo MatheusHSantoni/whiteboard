@@ -5,7 +5,7 @@ import Whiteboard from "./components/Canvas/Whiteboard";
 import Toolbar from "./components/Toolbar/Toolbar";
 import { readBoardImage } from "./utils/boardImage";
 import { useWhiteboard } from "./hooks/useWhiteboard";
-import { resizeShape, type ElementStyle, type Point, type Shape, type Tool } from "./types/shapes";
+import { resizeShape, type ElementStyle, type Point, type Shape, type TextMark, type Tool } from "./types/shapes";
 
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 200;
@@ -88,8 +88,8 @@ export function Editor({ storage, server, deleting, navigation }: {
     ));
   }
 
-  function editText(id: string, text: string) {
-    updateShape(id, (shape) => shape.type === "text" && shape.text !== text ? { ...shape, text } : shape);
+  function editText(id: string, text: string, marks: TextMark[]) {
+    updateShape(id, (shape) => shape.type === "text" ? { ...shape, text, marks } : shape);
   }
 
   function changeArrowBend(id: string, bend: Point) {

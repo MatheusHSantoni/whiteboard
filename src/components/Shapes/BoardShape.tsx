@@ -6,6 +6,7 @@ import { Arrow, Circle, Group, Rect, Text } from "react-konva/lib/ReactKonvaCore
 import { DEFAULT_DRAWING_COLOR, DEFAULT_FILL, DEFAULT_FONT_SIZE, FONTS, resizeShape, type Point, type Shape } from "../../types/shapes";
 import BoardImage from "./BoardImage";
 import Rectangle from "./Rectangle";
+import { textCharacterStyle } from "./textCharacterStyle";
 
 type BoardShapeProps = {
   shape: Shape;
@@ -107,6 +108,7 @@ export default function BoardShape({
       {shape.type === "text" && (
         <Text
           text={shape.text}
+          charRenderFunc={shape.marks?.length ? textCharacterStyle(shape) : undefined}
           width={280}
           padding={4}
           fontSize={shape.fontSize ?? DEFAULT_FONT_SIZE}

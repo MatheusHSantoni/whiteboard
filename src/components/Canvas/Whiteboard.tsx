@@ -3,7 +3,8 @@ import type { Layer as KonvaLayer } from "konva/lib/Layer";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { Layer, Rect, Stage } from "react-konva/lib/ReactKonvaCore.js";
 import BoardShape from "../Shapes/BoardShape";
-import { createDrawing, DEFAULT_FONT_SIZE, FONTS, MAX_TEXT_LENGTH, type DrawingTool, type ElementStyle, type Point, type Shape, type Tool } from "../../types/shapes";
+import InlineTextEditor from "./InlineTextEditor";
+import { createDrawing, DEFAULT_FONT_SIZE, FONTS, type TextMark, type DrawingTool, type ElementStyle, type Point, type Shape, type Tool } from "../../types/shapes";
 
 type Gesture = {
   pointerId: number;
@@ -31,7 +32,7 @@ type WhiteboardProps = {
   shapes: Shape[];
   disabled: boolean;
   onAdd: (shape: Shape) => void;
-  onTextEdit: (id: string, text: string) => void;
+  onTextEdit: (id: string, text: string, marks: TextMark[]) => void;
   onMove: (ids: string[], delta: Point) => void;
   onImageResize: (id: string, width: number, height: number) => void;
   onResize: (id: string, point: Point) => void;
@@ -57,8 +58,7 @@ export default function Whiteboard({
   const panGesture = useRef<PanGesture | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [gesture, setGesture] = useState<Gesture | null>(null);
-  const [textPosition, setTextPosition] = useState<(Point & ElementStyle & { id?: string }) | null>(null);
-  const [text, setText] = useState("");
+  const [textPosition, setTextPosition] = useState<(Point & ElementStyle & { id?: string; text?: string; marks?: TextMark[] }) | null>(null);
 
   useEffect(() => {
     if (!container.current) return;
@@ -83,7 +83,6 @@ export default function Whiteboard({
 
     if (tool === "text") {
       event.evt.preventDefault();
-      setText("");
       setTextPosition({ ...start, ...drawingStyle });
       return;
     }
@@ -212,8 +211,7 @@ export default function Whiteboard({
 
           const { id: textId, x, y, color, font, fontSize } = shape;
           onSelect([textId]);
-          setText(shape.text);
-          setTextPosition({ id: textId, x, y, color, font, fontSize });
+          setTextPosition({ id: textId, x, y, color, font, fontSize, text: shape.text, marks: shape.marks });
         }}
         onPointerDown={startGesture}
         onPointerMove={updateGesture}
@@ -241,9 +239,9 @@ export default function Whiteboard({
         </Layer>
       </Stage>
       {textPosition && (
-        <textarea
-          className="text-editor"
-          aria-label="Texto do elemento"
+        <InlineTextEditor
+          initialText={textPosition.text ?? ""}
+          initialMarks={textPosition.marks ?? []}
           style={{
             left: offset.x + textPosition.x * scale,
             top: offset.y + textPosition.y * scale,
@@ -253,32 +251,20 @@ export default function Whiteboard({
             fontFamily: FONTS[textPosition.font ?? "system"].stack,
             fontSize: textPosition.fontSize ?? DEFAULT_FONT_SIZE,
           }}
-          autoFocus
-          onFocus={(event) => event.currentTarget.setSelectionRange(text.length, text.length)}
-          rows={1}
-          maxLength={MAX_TEXT_LENGTH}
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          onBlur={() => {
-            const content = text.trim();
-            if (content) {
-              const { id, ...position } = textPosition;
-              if (id) onTextEdit(id, content);
-              else onAdd({ id: crypto.randomUUID(), type: "text", ...position, text: content });
+          onCommit={(text, marks) => {
+            if (text) {
+              const { id, text: initialText, marks: initialMarks, ...position } = textPosition;
+              if (id) {
+                if (text !== initialText || JSON.stringify(marks) !== JSON.stringify(initialMarks ?? [])) {
+                  onTextEdit(id, text, marks);
+                }
+              } else {
+                onAdd({ id: crypto.randomUUID(), type: "text", ...position, text, marks });
+              }
             }
             setTextPosition(null);
           }}
-          onKeyDown={(event) => {
-            if (event.nativeEvent.isComposing) return;
-            if (event.key === "Escape") {
-              event.preventDefault();
-              setTextPosition(null);
-            }
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              event.currentTarget.blur();
-            }
-          }}
+          onCancel={() => setTextPosition(null)}
         />
       )}
     </section>

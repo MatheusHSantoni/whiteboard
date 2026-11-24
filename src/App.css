@@ -219,19 +219,62 @@ button:focus-visible {
 .quadro--erase { cursor: crosshair; }
 .quadro--panning { cursor: grabbing; }
 
-.text-editor {
+.inline-text-editor {
   position: absolute;
   width: 280px;
+  color: #293452;
+  font: 20px/1 system-ui, sans-serif;
+}
+
+.text-editor, .text-editor-preview {
+  width: 100%;
   min-height: 28px;
-  field-sizing: content;
   padding: 4px;
   border: 0;
-  outline: none;
-  color: #293452;
-  background: transparent;
-  font: 20px/1 system-ui, sans-serif;
+  font: inherit;
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.text-editor-preview {
+  position: absolute;
+  inset: 0 0 auto;
+  pointer-events: none;
+}
+
+.text-editor {
+  position: relative;
+  display: block;
+  field-sizing: content;
+  outline: none;
+  color: transparent;
+  caret-color: #293452;
+  background: transparent;
   resize: none;
+}
+
+.text-format {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  padding: 4px;
+  background: white;
+  border: 1px solid #d7dbea;
+  border-radius: 8px;
+  font: 12px system-ui, sans-serif;
+}
+
+.text-format label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.text-format input, .text-format button {
+  min-width: 24px;
+  min-height: 24px;
+  padding: 2px 4px;
 }
 
 .message {

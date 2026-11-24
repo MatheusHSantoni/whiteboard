@@ -112,6 +112,11 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   await canvas.dblclick({ position: { x: 90, y: 190 } });
   await expect(editor).toHaveValue("Meu primeiro quadro");
   await editor.fill("Texto atualizado");
+  await editor.press("Home");
+  for (let index = 0; index < 5; index++) await editor.press("Shift+ArrowRight");
+  const format = page.getByRole("group", { name: "Formatar trecho" });
+  await format.getByLabel("Cor do trecho").fill("#d71920");
+  await format.getByRole("button", { name: "Marca-texto amarelo" }).click();
   await editor.press("Enter");
   const font = page.getByLabel("Fonte");
   await expect(font.locator("option[value=verdana]")).toHaveText("Verdana");
@@ -121,10 +126,22 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
     expect.objectContaining({ type: "rectangle", x: 95, y: 80, width: 60, height: 55, color: "#214bd5", fillColor: "#ffec9a" }),
     expect.objectContaining({ type: "arrow" }),
-    expect.objectContaining({ type: "text", text: "Texto atualizado", x: 75, y: 180, font: "handwriting", fontSize: 32 }),
+    expect.objectContaining({ type: "text", text: "Texto atualizado", x: 75, y: 180, font: "handwriting", fontSize: 32,
+      marks: Array.from({ length: 5 }, (_, index) => ({ index, color: "#d71920", highlight: "#fff176" })), }),
   ]);
 
   await canvas.click({ position: { x: 90, y: 190 } });
+  await expect.poll(() => canvas.evaluate((node) => {
+    const pixels = node.getContext("2d").getImageData(75, 180, 240, 42).data;
+    let textColor = false;
+    let highlight = false;
+    for (let index = 0; index < pixels.length; index += 4) {
+      const [red, green, blue, alpha] = pixels.subarray(index, index + 4);
+      textColor ||= alpha === 255 && red === 215 && green === 25 && blue === 32;
+      highlight ||= alpha === 255 && red === 255 && green === 241 && blue === 118;
+    }
+    return textColor && highlight;
+  })).toBe(true);
   await page.keyboard.press("Delete");
   await page.getByRole("button", { name: "Aumentar zoom" }).click();
   await expect(page.getByRole("button", { name: "125%" })).toBeVisible();

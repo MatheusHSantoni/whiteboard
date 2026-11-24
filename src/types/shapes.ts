@@ -24,6 +24,8 @@ export type ElementStyle = {
   fontSize?: number;
 };
 
+export type TextMark = { index: number; color?: string; highlight?: string };
+
 type PositionedShape = Point & ElementStyle & { id: string };
 
 export type Shape = PositionedShape & (
@@ -32,7 +34,7 @@ export type Shape = PositionedShape & (
   | { type: "circle"; radius: number }
   | { type: "arrow"; dx: number; dy: number; bend?: Point }
   | { type: "image"; src: string; width: number; height: number }
-  | { type: "text"; text: string }
+  | { type: "text"; text: string; marks?: TextMark[] }
 );
 
 export const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -116,10 +118,23 @@ export function isShape(value: unknown): value is Shape {
         );
     case "text":
       return typeof shape.text === "string" && shape.text.length <= MAX_TEXT_LENGTH &&
-        shape.text.trim().length > 0;
+        shape.text.trim().length > 0 && validTextMarks(shape.marks, shape.text.length);
     default:
       return false;
   }
+}
+
+function validTextMarks(value: unknown, length: number): boolean {
+  if (value === undefined) return true;
+  if (!Array.isArray(value) || value.length > length) return false;
+  const indexes = new Set<number>();
+  return value.every((mark) => {
+    if (!mark || typeof mark !== "object" || !Number.isInteger(mark.index) ||
+        mark.index < 0 || mark.index >= length || indexes.has(mark.index)) return false;
+    indexes.add(mark.index);
+    return [mark.color, mark.highlight].every((color) =>
+      color === undefined || (typeof color === "string" && /^#[\da-f]{6}$/i.test(color)));
+  });
 }
 
 export function isShapeList(value: unknown): value is Shape[] {

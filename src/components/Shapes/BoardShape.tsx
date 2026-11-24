@@ -4,7 +4,7 @@ import "konva/lib/shapes/Circle.js";
 import "konva/lib/shapes/Line.js";
 import { useState } from "react";
 import { Arrow, Circle, Group, Line, Rect, Text } from "react-konva/lib/ReactKonvaCore.js";
-import { DEFAULT_DRAWING_COLOR, DEFAULT_FILL, DEFAULT_FONT_SIZE, FONTS, resizeShape, type Point, type Shape } from "../../types/shapes";
+import { DEFAULT_DRAWING_COLOR, DEFAULT_FILL, DEFAULT_FONT_SIZE, DEFAULT_TEXT_WIDTH, FONTS, resizeShape, type Point, type Shape } from "../../types/shapes";
 import BoardImage from "./BoardImage";
 import Rectangle from "./Rectangle";
 import { textCharacterStyle } from "./textCharacterStyle";
@@ -33,7 +33,8 @@ export default function BoardShape({
   const resizePoint = shape.type === "arrow" ? { x: shape.dx, y: shape.dy } :
     shape.type === "rectangle" ? { x: shape.width, y: shape.height } :
     shape.type === "square" ? { x: shape.size, y: shape.size } :
-    shape.type === "circle" ? { x: shape.radius, y: 0 } : null;
+    shape.type === "circle" ? { x: shape.radius, y: 0 } :
+    shape.type === "text" ? { x: shape.width ?? DEFAULT_TEXT_WIDTH, y: 4 + (shape.fontSize ?? DEFAULT_FONT_SIZE) / 2 } : null;
 
   return (
     <Group
@@ -132,7 +133,7 @@ export default function BoardShape({
         <Text
           text={shape.text}
           charRenderFunc={shape.marks?.length ? textCharacterStyle(shape) : undefined}
-          width={280}
+          width={shape.width ?? DEFAULT_TEXT_WIDTH}
           padding={4}
           fontSize={shape.fontSize ?? DEFAULT_FONT_SIZE}
           fontFamily={FONTS[shape.font ?? "system"].stack}

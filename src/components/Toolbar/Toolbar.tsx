@@ -28,19 +28,27 @@ type ToolbarProps = {
   onStyleChange: (patch: ElementStyle) => void;
   onStrokeWidthChange: (tool: FreehandTool, direction: number) => void;
   onDelete?: () => void;
+  onUndo?: () => void;
 };
 
 export default function Toolbar({
-  activeTool, onToolChange, disabled, style, styleType, onStyleChange, onStrokeWidthChange, onDelete, onImportImage, importing,
+  activeTool, onToolChange, disabled, style, styleType, onStyleChange, onStrokeWidthChange, onDelete, onUndo, onImportImage, importing,
 }: ToolbarProps) {
   const hasFill = styleType === "square" || styleType === "rectangle" || styleType === "circle";
 
   useEffect(() => {
     function handleShortcut(event: KeyboardEvent) {
-      if (disabled || event.defaultPrevented || event.ctrlKey ||
-          event.metaKey) return;
-      if (event.target instanceof HTMLElement &&
-          (event.target.isContentEditable || event.target.closest("input, textarea, select"))) return;
+      if (disabled || event.defaultPrevented) return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (target?.isContentEditable || target?.closest("textarea, input:not([type=color]):not([type=file])")) return;
+
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey &&
+          event.key.toLowerCase() === "z" && onUndo) {
+        event.preventDefault();
+        onUndo();
+        return;
+      }
+      if (event.ctrlKey || event.metaKey || target?.closest("input, select")) return;
 
       if ((activeTool === "pencil" || activeTool === "marker") && !event.altKey &&
           (event.key === "+" || event.key === "-")) {
@@ -65,7 +73,7 @@ export default function Toolbar({
 
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [activeTool, disabled, onToolChange, onDelete, onStrokeWidthChange]);
+  }, [activeTool, disabled, onToolChange, onDelete, onUndo, onStrokeWidthChange]);
 
   return (
     <nav className="toolbar" aria-label="Ferramentas do quadro">
@@ -107,6 +115,10 @@ export default function Toolbar({
           <div>
             <dt>Ajustar espessura do lápis ou marca-texto</dt>
             <dd><kbd>+ / −</kbd></dd>
+          </div>
+          <div>
+            <dt>Desfazer última edição</dt>
+            <dd><kbd>Ctrl + Z</kbd></dd>
           </div>
           <div>
             <dt>Apagar seleção</dt>

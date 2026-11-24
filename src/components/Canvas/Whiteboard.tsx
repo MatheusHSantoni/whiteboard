@@ -4,7 +4,7 @@ import type { KonvaEventObject } from "konva/lib/Node";
 import { Layer, Rect, Stage } from "react-konva/lib/ReactKonvaCore.js";
 import BoardShape from "../Shapes/BoardShape";
 import InlineTextEditor from "./InlineTextEditor";
-import { createDrawing, DEFAULT_FONT_SIZE, FONTS, MAX_STROKE_POINTS, type FreehandTool, type TextMark, type DrawingTool, type ElementStyle, type Point, type Shape, type Tool } from "../../types/shapes";
+import { createDrawing, DEFAULT_FONT_SIZE, DEFAULT_TEXT_WIDTH, FONTS, MAX_STROKE_POINTS, type FreehandTool, type TextMark, type DrawingTool, type ElementStyle, type Point, type Shape, type Tool } from "../../types/shapes";
 
 type Gesture = {
   pointerId: number;
@@ -36,6 +36,7 @@ function makeStroke(gesture: StrokeGesture, id: string, points: number[]): Shape
 }
 
 type EraseGesture = {
+  historyGroup: symbol;
   pointerId: number;
   previous: Point;
   erased: Set<string>;
@@ -53,7 +54,7 @@ type WhiteboardProps = {
   drawingStyle?: ElementStyle;
   strokeWidth?: number;
   scale: number;
-  onErase: (ids: string[]) => void;
+  onErase: (ids: string[], historyGroup: symbol) => void;
   selectedIds: string[];
   onSelect: (ids: string[]) => void;
   shapes: Shape[];
@@ -86,7 +87,7 @@ export default function Whiteboard({
   const eraseGesture = useRef<EraseGesture | null>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [gesture, setGesture] = useState<Gesture | null>(null);
-  const [textPosition, setTextPosition] = useState<(Point & ElementStyle & { id?: string; text?: string; marks?: TextMark[] }) | null>(null);
+  const [textPosition, setTextPosition] = useState<(Point & ElementStyle & { id?: string; text?: string; marks?: TextMark[]; width?: number }) | null>(null);
 
   useEffect(() => {
     if (!container.current) return;
@@ -135,7 +136,7 @@ export default function Whiteboard({
     active.previous = point;
     if (hits.length) {
       active.refreshHitCanvas = true;
-      onErase(hits);
+      onErase(hits, active.historyGroup);
     }
   }
 
@@ -159,7 +160,7 @@ export default function Whiteboard({
       const point = layer.current?.getStage()?.getPointerPosition();
       if (!point) return;
       const { pointerId, target } = event.evt;
-      eraseGesture.current = { pointerId, previous: point, erased: new Set(), refreshHitCanvas: false };
+      eraseGesture.current = { historyGroup: Symbol(), pointerId, previous: point, erased: new Set(), refreshHitCanvas: false };
       if (target instanceof Element) target.setPointerCapture(pointerId);
       eraseAlong(event);
       return;
@@ -310,9 +311,9 @@ export default function Whiteboard({
           const shape = shapes.find((item) => item.id === id);
           if (shape?.type !== "text") return;
 
-          const { id: textId, x, y, color, font, fontSize } = shape;
+          const { id: textId, x, y, color, font, fontSize, width } = shape;
           onSelect([textId]);
-          setTextPosition({ id: textId, x, y, color, font, fontSize, text: shape.text, marks: shape.marks });
+          setTextPosition({ id: textId, x, y, color, font, fontSize, width, text: shape.text, marks: shape.marks });
         }}
         onPointerDown={startGesture}
         onPointerMove={updateGesture}
@@ -354,6 +355,7 @@ export default function Whiteboard({
             color: textPosition.color,
             fontFamily: FONTS[textPosition.font ?? "system"].stack,
             fontSize: textPosition.fontSize ?? DEFAULT_FONT_SIZE,
+            width: textPosition.width ?? DEFAULT_TEXT_WIDTH,
           }}
           onCommit={(text, marks) => {
             if (text) {

@@ -19,6 +19,9 @@ export const FONTS = {
 export const FONT_SIZES = [12, 16, 20, 24, 32, 40, 48];
 export const DEFAULT_FILL = "#f1efff";
 export const DEFAULT_FONT_SIZE = 20;
+export const DEFAULT_TEXT_WIDTH = 280;
+const MIN_TEXT_WIDTH = 48;
+const MAX_TEXT_WIDTH = 4096;
 
 export type ElementStyle = {
   color?: string;
@@ -38,7 +41,7 @@ export type Shape = PositionedShape & (
   | { type: "circle"; radius: number }
   | { type: "arrow"; dx: number; dy: number; bend?: Point }
   | { type: "image"; src: string; width: number; height: number }
-  | { type: "text"; text: string; marks?: TextMark[] }
+  | { type: "text"; text: string; marks?: TextMark[]; width?: number }
   | { type: FreehandTool; points: number[]; strokeWidth: number }
 );
 
@@ -76,6 +79,9 @@ export function resizeShape(shape: Shape, point: Point): Shape {
   const { x, y } = point;
   if (shape.type === "rectangle") {
     return { ...shape, width: Math.max(5, x), height: Math.max(5, y) };
+  }
+  if (shape.type === "text") {
+    return { ...shape, width: Math.round(Math.max(MIN_TEXT_WIDTH, Math.min(MAX_TEXT_WIDTH, x))) };
   }
   if (shape.type === "square") return { ...shape, size: Math.max(5, x, y) };
   if (shape.type === "circle") return { ...shape, radius: Math.max(5, x) };
@@ -130,7 +136,9 @@ export function isShape(value: unknown): value is Shape {
         shape.points.every(Number.isFinite);
     case "text":
       return typeof shape.text === "string" && shape.text.length <= MAX_TEXT_LENGTH &&
-        shape.text.trim().length > 0 && validTextMarks(shape.marks, shape.text.length);
+        shape.text.trim().length > 0 && validTextMarks(shape.marks, shape.text.length) &&
+        (shape.width === undefined || (typeof shape.width === "number" &&
+          shape.width >= MIN_TEXT_WIDTH && shape.width <= MAX_TEXT_WIDTH));
     default:
       return false;
   }

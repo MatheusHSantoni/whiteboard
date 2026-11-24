@@ -1,9 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type SetStateAction } from "react";
 import type { Shape } from "../types/shapes";
 import type { BoardStorage } from "../utils/boardLibrary";
 
+const HISTORY_LIMIT = 50;
+
+type BoardHistory = { shapes: Shape[]; previous: Shape[][]; group?: symbol };
+
 export function useWhiteboard(storage: BoardStorage) {
-  const [shapes, setShapes] = useState<Shape[]>([]);
+  const [{ shapes, previous }, setHistory] = useState<BoardHistory>({ shapes: [], previous: [] });
   const [savedShapes, setSavedShapes] = useState<Shape[]>(shapes);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -17,7 +21,7 @@ export function useWhiteboard(storage: BoardStorage) {
 
     storage.load().then((storedShapes) => {
       if (!active) return;
-      setShapes(storedShapes);
+      setHistory({ shapes: storedShapes, previous: [] });
       setSavedShapes(storedShapes);
     }).catch((error: unknown) => {
       if (!active) return;
@@ -49,6 +53,28 @@ export function useWhiteboard(storage: BoardStorage) {
     });
   }, [loading, loadFailed, saving, shapes, savedShapes, saveFailure, storage]);
 
+  function setShapes(update: SetStateAction<Shape[]>, group?: symbol) {
+    setHistory((history) => {
+      const next = typeof update === "function" ? update(history.shapes) : update;
+      if (next === history.shapes || (next.length === history.shapes.length &&
+          next.every((shape, index) => shape === history.shapes[index]))) return history;
+      return {
+        shapes: next,
+        previous: group && group === history.group ? history.previous :
+          [...history.previous.slice(-(HISTORY_LIMIT - 1)), history.shapes],
+        group,
+      };
+    });
+  }
+
+  function undo() {
+    setHistory((history) => {
+      const last = history.previous.at(-1);
+      if (!last) return history;
+      return { shapes: last, previous: history.previous.slice(0, -1) };
+    });
+  }
+
   function retryLoad() {
     setLoading(true);
     setLoadFailed(false);
@@ -56,10 +82,10 @@ export function useWhiteboard(storage: BoardStorage) {
   }
 
   return {
-    shapes, setShapes, retryLoad, loading, loadFailed,
+    shapes, setShapes, retryLoad, loading, loadFailed, undo, canUndo: previous.length > 0,
     saveFailed: shapes === saveFailure?.shapes,
     saveError: saveFailure?.message ?? "",
     retrySave: () => setSaveFailure(null),
-    dirty: shapes !== savedShapes,
+    dirty: shapes !== savedShapes || saving,
   };
 }

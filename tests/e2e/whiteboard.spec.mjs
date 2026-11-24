@@ -34,7 +34,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   const shortcutList = page.locator("dl.shortcut-list");
   await expect(shortcutList).toBeVisible();
   await expect(shortcutList.locator("kbd")).toHaveText([
-    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + P", "Alt + M", "Alt + B", "Alt + T", "Ctrl + arrastar", "Shift + clique", "+ / −", "Delete", "Enter", "Shift + Enter", "Esc",
+    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + P", "Alt + M", "Alt + B", "Alt + T", "Ctrl + arrastar", "Shift + clique", "+ / −", "Ctrl + Z", "Delete", "Enter", "Shift + Enter", "Esc",
   ]);
   await page.keyboard.press("Enter");
   await expect(shortcutList).toBeHidden();
@@ -108,7 +108,9 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   await fillMenu.click();
 
   await canvas.click({ position: { x: 90, y: 190 } });
+  await drag(page, canvas, { x: 355, y: 194 }, { x: 495, y: 194 });
   await canvas.dblclick({ position: { x: 90, y: 190 } });
+  await expect(editor).toHaveCSS("width", "420px");
   await expect(editor).toHaveValue("Meu primeiro quadro");
   await editor.fill("Rascunho descartado");
   await editor.press("Escape");
@@ -129,7 +131,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
     expect.objectContaining({ type: "rectangle", x: 95, y: 80, width: 60, height: 55, color: "#214bd5", fillColor: "#ffec9a" }),
     expect.objectContaining({ type: "arrow" }),
-    expect.objectContaining({ type: "text", text: "Texto atualizado", x: 75, y: 180, font: "handwriting", fontSize: 32,
+    expect.objectContaining({ type: "text", text: "Texto atualizado", x: 75, y: 180, width: 420, font: "handwriting", fontSize: 32,
       marks: Array.from({ length: 5 }, (_, index) => ({ index, color: "#d71920", highlight: "#fff176" })), }),
   ]);
 
@@ -308,8 +310,15 @@ test("seleciona por arraste, alterna com Shift e move e apaga o conjunto", async
     expect.objectContaining({ type: "rectangle", x: 70, y: 70 }),
     expect.objectContaining({ type: "circle", x: 185, y: 95 }),
   ]);
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "rectangle", x: 40, y: 50 }),
+    expect.objectContaining({ type: "circle", x: 155, y: 75 }),
+  ]);
   await page.keyboard.press("Delete");
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([]);
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(2);
 });
 
 test("desenha à mão livre com lápis e marca-texto e ajusta a espessura pelo teclado", async ({ page }) => {

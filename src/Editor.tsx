@@ -34,7 +34,7 @@ export function Editor({ storage, server, deleting, navigation }: {
     pencil: {}, marker: { color: "#fff176" },
   });
   const [strokeWidths, setStrokeWidths] = useState({ pencil: 3, marker: 18 });
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selection, setSelectedIds] = useState<string[]>([]);
   const [zoom, setZoom] = useState(100);
   const [imageError, setImageError] = useState("");
   const [importing, setImporting] = useState(false);
@@ -48,6 +48,7 @@ export function Editor({ storage, server, deleting, navigation }: {
     window.addEventListener("beforeunload", confirmExit);
     return () => window.removeEventListener("beforeunload", confirmExit);
   }, [board.dirty]);
+  const selectedIds = selection.filter((id) => board.shapes.some((shape) => shape.id === id));
   const selected = tool === "select" && selectedIds.length === 1
     ? board.shapes.find(({ id }) => id === selectedIds[0]) : undefined;
   const drawingStyle = tool === "select" || tool === "erase" ? undefined : styles[tool];
@@ -111,9 +112,9 @@ export function Editor({ storage, server, deleting, navigation }: {
     updateShape(id, (shape) => shape.type === "arrow" ? { ...shape, bend } : shape);
   }
 
-  function eraseShapes(ids: string[]) {
+  function eraseShapes(ids: string[], historyGroup?: symbol) {
     const removed = new Set(ids);
-    board.setShapes((shapes) => shapes.filter((shape) => !removed.has(shape.id)));
+    board.setShapes((shapes) => shapes.filter((shape) => !removed.has(shape.id)), historyGroup);
     setSelectedIds((current) => current.filter((id) => !removed.has(id)));
   }
 
@@ -156,13 +157,14 @@ export function Editor({ storage, server, deleting, navigation }: {
         importing={importing}
         onStyleChange={changeStyle}
         onStrokeWidthChange={changeStrokeWidth}
+        onUndo={board.canUndo ? board.undo : undefined}
         onDelete={tool === "select" && selectedIds.length ? () => eraseShapes(selectedIds) : undefined}
       />
       {!disabled && (
         <p className="instructions">
           {tool === "select" && selectedIds.length > 1
             ? `${selectedIds.length} elementos selecionados. Arraste para mover ou pressione Delete.`
-            : selected?.type === "text" ? "Dê dois cliques no texto para editar." :
+            : selected?.type === "text" ? "Dê dois cliques para editar ou arraste a alça roxa para mudar a largura do texto." :
             selected?.type === "arrow" ? "Arraste a ponta roxa para redimensionar a seta ou o ponto branco para ajustar a curva." :
             selected?.type === "image" ? "Arraste a alça no canto da imagem para redimensionar." :
             selected && ["square", "rectangle", "circle"].includes(selected.type)

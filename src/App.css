@@ -228,7 +228,6 @@ button:focus-visible {
 
 .inline-text-editor {
   position: absolute;
-  width: 280px;
   color: #293452;
   font: 20px/1 system-ui, sans-serif;
 }

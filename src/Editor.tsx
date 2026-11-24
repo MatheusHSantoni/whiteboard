@@ -105,6 +105,10 @@ export function Editor({ storage, server, deleting, navigation }: {
   }
 
   function editText(id: string, text: string, marks: TextMark[]) {
+    if (!text) {
+      eraseShapes([id]);
+      return;
+    }
     updateShape(id, (shape) => shape.type === "text" ? { ...shape, text, marks } : shape);
   }
 
@@ -133,6 +137,12 @@ export function Editor({ storage, server, deleting, navigation }: {
     ? board.saveError
     : "Não foi possível salvar as últimas alterações.";
 
+  function reloadServerBoard() {
+    if (!window.confirm("Carregar a versão do servidor e descartar as alterações locais?")) return;
+    setSelectedIds([]);
+    board.retryLoad();
+  }
+
   return (
     <main className="app">
       <header className="app-header">
@@ -142,7 +152,7 @@ export function Editor({ storage, server, deleting, navigation }: {
 
       <div className="board-library">
         {navigation?.(board.dirty || importing)}
-        <button type="button" disabled={disabled} onClick={() => downloadBackup(board.shapes)}>
+        <button type="button" disabled={disabled && !board.saveConflict} onClick={() => downloadBackup(board.shapes)}>
           Exportar Board
         </button>
       </div>
@@ -181,10 +191,14 @@ export function Editor({ storage, server, deleting, navigation }: {
           <button type="button" onClick={board.retryLoad}>Tentar novamente</button>
         </div>
       )}
-      {board.saveFailed && (
+      {board.saveFailed && !board.loading && !board.loadFailed && (
         <div className="message">
           <p role="alert">{saveError}</p>
-          <button type="button" onClick={board.retrySave}>Tentar salvar novamente</button>
+          {board.saveConflict ? (
+            <button type="button" onClick={reloadServerBoard}>Carregar versão do servidor</button>
+          ) : (
+            <button type="button" onClick={board.retrySave}>Tentar salvar novamente</button>
+          )}
         </div>
       )}
 

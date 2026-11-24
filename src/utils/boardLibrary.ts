@@ -9,6 +9,8 @@ export interface BoardStorage {
   save: (shapes: Shape[]) => Promise<void>;
 }
 
+export class BoardConflictError extends Error {}
+
 async function request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
   const response = await fetch("/api/boards" + path, {
     method,
@@ -20,7 +22,9 @@ async function request<T>(path: string, method = "GET", body?: unknown): Promise
   });
   if (!response.ok) {
     const data = await response.json().catch(() => null);
-    throw new Error(data?.error || "Não foi possível acessar o servidor.");
+    const message = data?.error || "Não foi possível acessar o servidor.";
+    if (method === "PUT" && response.status === 409) throw new BoardConflictError(message);
+    throw new Error(message);
   }
   return response.json();
 }

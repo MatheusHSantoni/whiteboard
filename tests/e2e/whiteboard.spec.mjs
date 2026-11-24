@@ -358,4 +358,93 @@ test("desenha à mão livre com lápis e marca-texto e ajusta a espessura pelo t
   await page.mouse.move(bounds.x + 80, bounds.y + 160);
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([]);
   await page.mouse.up();
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(2);
+  await page.keyboard.press("Control+y");
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([]);
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(2);
+  await page.keyboard.press("Alt+s");
+  await drag(page, canvas, { x: 170, y: 50 }, { x: 210, y: 90 });
+  await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(3);
+  await page.keyboard.press("Control+y");
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(2);
+});
+
+test("confirma a remoção de texto vazio e permite desfazer", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  const canvas = page.locator("canvas").first();
+  const text = page.getByRole("textbox", { name: "Texto do elemento" });
+  const position = { x: 70, y: 80 };
+  await page.keyboard.press("Alt+t");
+  await canvas.click({ position });
+  await text.fill("Anotação");
+  await text.press("Enter");
+  await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(1);
+
+  await page.keyboard.press("Alt+v");
+  await canvas.dblclick({ position: { x: 82, y: 92 } });
+  await text.fill("");
+  await text.press("Escape");
+  await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(1);
+  await canvas.dblclick({ position: { x: 82, y: 92 } });
+  await text.fill("");
+  await text.press("Enter");
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([]);
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "text", text: "Anotação" }),
+  ]);
+});
+
+test("preserva o backup local e recarrega a revisão do servidor após um conflito", async ({ page }) => {
+  const revisions = [];
+  let reads = 0;
+  await page.route("/", async (route) => {
+    const response = await route.fetch();
+    const body = (await response.text()).replace("</head>",
+      '<meta name="whiteboard-storage" content="server"></head>');
+    await route.fulfill({ response, body });
+  });
+  await page.route("**/api/boards", (route) => route.fulfill({
+    json: [{ id: "board-test", name: "Board de teste" }],
+  }));
+  await page.route("**/api/boards/board-test", async (route) => {
+    if (route.request().method() === "GET") {
+      reads++;
+      await route.fulfill({ json: { shapes: [], revision: reads === 1 ? 1 : 2 } });
+      return;
+    }
+    revisions.push(route.request().postDataJSON().revision);
+    await route.fulfill(revisions.length === 1
+      ? { status: 409, json: { error: "O Board foi alterado em outra aba ou computador." } }
+      : { json: { revision: 3 } });
+  });
+
+  await page.goto("/");
+  const canvas = page.locator("canvas").first();
+  await expect(page.getByRole("status")).toHaveText("Salvo no servidor");
+  await page.keyboard.press("Alt+s");
+  await drag(page, canvas, { x: 40, y: 50 }, { x: 90, y: 90 });
+  await expect(page.getByRole("alert")).toContainText("alterado em outra aba");
+
+  const reload = page.getByRole("button", { name: "Carregar versão do servidor" });
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await reload.click();
+  await drag(page, canvas, { x: 100, y: 50 }, { x: 150, y: 90 });
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exportar Board" }).click();
+  const { readFile } = await import("node:fs/promises");
+  const backup = JSON.parse(await readFile(await (await download).path(), "utf8"));
+  expect(backup.shapes).toHaveLength(2);
+  expect(revisions).toEqual([1]);
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await reload.click();
+  await expect(page.getByRole("status")).toHaveText("Salvo no servidor");
+  await drag(page, canvas, { x: 40, y: 50 }, { x: 90, y: 90 });
+  await expect(page.getByRole("status")).toHaveText("Salvo no servidor");
+  expect(revisions).toEqual([1, 2]);
 });

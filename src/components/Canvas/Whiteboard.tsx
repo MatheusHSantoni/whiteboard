@@ -358,15 +358,13 @@ export default function Whiteboard({
             width: textPosition.width ?? DEFAULT_TEXT_WIDTH,
           }}
           onCommit={(text, marks) => {
-            if (text) {
-              const { id, text: initialText, marks: initialMarks, ...position } = textPosition;
-              if (id) {
-                if (text !== initialText || JSON.stringify(marks) !== JSON.stringify(initialMarks ?? [])) {
-                  onTextEdit(id, text, marks);
-                }
-              } else {
-                onAdd({ id: crypto.randomUUID(), type: "text", ...position, text, marks });
+            const { id, text: initialText, marks: initialMarks, ...position } = textPosition;
+            if (id) {
+              if (text !== initialText || JSON.stringify(marks) !== JSON.stringify(initialMarks ?? [])) {
+                onTextEdit(id, text, marks);
               }
+            } else if (text) {
+              onAdd({ id: crypto.randomUUID(), type: "text", ...position, text, marks });
             }
             setTextPosition(null);
           }}

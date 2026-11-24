@@ -1,18 +1,15 @@
 import { useEffect, useRef, useState, type SetStateAction } from "react";
 import type { Shape } from "../types/shapes";
-import type { BoardStorage } from "../utils/boardLibrary";
-
-const HISTORY_LIMIT = 50;
-
-type BoardHistory = { shapes: Shape[]; previous: Shape[][]; next: Shape[][]; group?: symbol };
+import { BoardConflictError, type BoardStorage } from "../utils/boardLibrary";
+import { createHistory, recordEdit, redoEdit, undoEdit } from "../utils/boardHistory";
 
 export function useWhiteboard(storage: BoardStorage) {
-  const [{ shapes, previous, next }, setHistory] = useState<BoardHistory>({ shapes: [], previous: [], next: [] });
+  const [{ shapes, previous, next }, setHistory] = useState(() => createHistory());
   const [savedShapes, setSavedShapes] = useState<Shape[]>(shapes);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [saveFailure, setSaveFailure] = useState<{ shapes: Shape[]; message: string } | null>(null);
+  const [saveFailure, setSaveFailure] = useState<{ shapes: Shape[]; message: string; conflict: boolean } | null>(null);
   const writeInProgress = useRef(false);
   const [loadAttempt, setLoadAttempt] = useState(0);
 
@@ -21,8 +18,9 @@ export function useWhiteboard(storage: BoardStorage) {
 
     storage.load().then((storedShapes) => {
       if (!active) return;
-      setHistory({ shapes: storedShapes, previous: [], next: [] });
+      setHistory(createHistory(storedShapes));
       setSavedShapes(storedShapes);
+      setSaveFailure(null);
     }).catch((error: unknown) => {
       if (!active) return;
       console.error("Falha ao carregar o Board.", error);
@@ -36,7 +34,7 @@ export function useWhiteboard(storage: BoardStorage) {
 
   useEffect(() => {
     if (loading || loadFailed || saving || writeInProgress.current ||
-        shapes === savedShapes || shapes === saveFailure?.shapes) return;
+        shapes === savedShapes || saveFailure?.conflict || shapes === saveFailure?.shapes) return;
 
     // Serializa as gravações para que cada uma use a revisão retornada pela anterior.
     writeInProgress.current = true;
@@ -46,7 +44,11 @@ export function useWhiteboard(storage: BoardStorage) {
       setSaveFailure(null);
     }).catch((error: unknown) => {
       console.error("Falha ao salvar o Board.", error);
-      setSaveFailure({ shapes, message: error instanceof Error ? error.message : "" });
+      setSaveFailure({
+        shapes,
+        message: error instanceof Error ? error.message : "",
+        conflict: error instanceof BoardConflictError,
+      });
     }).finally(() => {
       writeInProgress.current = false;
       setSaving(false);
@@ -55,33 +57,17 @@ export function useWhiteboard(storage: BoardStorage) {
 
   function setShapes(update: SetStateAction<Shape[]>, group?: symbol) {
     setHistory((history) => {
-      const next = typeof update === "function" ? update(history.shapes) : update;
-      if (next === history.shapes || (next.length === history.shapes.length &&
-          next.every((shape, index) => shape === history.shapes[index]))) return history;
-      return {
-        shapes: next,
-        previous: group && group === history.group ? history.previous :
-          [...history.previous.slice(-(HISTORY_LIMIT - 1)), history.shapes],
-        next: [],
-        group,
-      };
+      const updatedShapes = typeof update === "function" ? update(history.shapes) : update;
+      return recordEdit(history, updatedShapes, group);
     });
   }
 
   function undo() {
-    setHistory((history) => {
-      const last = history.previous.at(-1);
-      if (!last) return history;
-      return { shapes: last, previous: history.previous.slice(0, -1), next: [...history.next, history.shapes] };
-    });
+    setHistory(undoEdit);
   }
 
   function redo() {
-    setHistory((history) => {
-      const next = history.next.at(-1);
-      if (!next) return history;
-      return { shapes: next, previous: [...history.previous, history.shapes], next: history.next.slice(0, -1) };
-    });
+    setHistory(redoEdit);
   }
 
   function retryLoad() {
@@ -93,9 +79,10 @@ export function useWhiteboard(storage: BoardStorage) {
   return {
     shapes, setShapes, retryLoad, loading, loadFailed, undo, canUndo: previous.length > 0,
     redo, canRedo: next.length > 0,
-    saveFailed: shapes === saveFailure?.shapes,
+    saveFailed: saveFailure?.conflict || shapes === saveFailure?.shapes,
+    saveConflict: saveFailure?.conflict ?? false,
     saveError: saveFailure?.message ?? "",
     retrySave: () => setSaveFailure(null),
-    dirty: shapes !== savedShapes || saving,
+    dirty: shapes !== savedShapes || saving || (saveFailure?.conflict ?? false),
   };
 }

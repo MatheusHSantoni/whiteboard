@@ -25,7 +25,7 @@ Abra http://127.0.0.1:5173. Use o mesmo endereço, porta e perfil do navegador p
 
 Para formatar um elemento já desenhado, use **Selecionar** e clique nele. A barra mantém os controles visíveis e habilita os que se aplicam ao elemento selecionado. Retângulos e círculos têm cores separadas para contorno e preenchimento, e textos têm cor, fonte e tamanho. Ao escolher uma ferramenta de desenho, os ajustes valem para os próximos elementos.
 
-Segure **Alt** e arraste com o botão esquerdo do mouse para mover a visualização do Board.
+Segure **Ctrl** e arraste com o botão esquerdo do mouse para mover a visualização do Board.
 
 Pressione **Delete** para apagar o elemento selecionado ou ative **Borracha** e clique no que deseja apagar. Os botões **−** e **+** ajustam o zoom. Clique na porcentagem para voltar a 100%.
 

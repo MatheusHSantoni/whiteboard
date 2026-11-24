@@ -34,7 +34,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   const shortcutList = page.locator("dl.shortcut-list");
   await expect(shortcutList).toBeVisible();
   await expect(shortcutList.locator("kbd")).toHaveText([
-    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + P", "Alt + M", "Alt + T", "Alt + arrastar", "Ctrl + clique", "+ / −", "Delete", "Enter", "Shift + Enter", "Esc",
+    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + P", "Alt + M", "Alt + B", "Alt + T", "Ctrl + arrastar", "Shift + clique", "+ / −", "Delete", "Enter", "Shift + Enter", "Esc",
   ]);
   await page.keyboard.press("Enter");
   await expect(shortcutList).toBeHidden();
@@ -157,9 +157,9 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
     expect.objectContaining({ type: "arrow", x: 150, y: 90 }),
   ]);
 
-  await page.keyboard.down("Alt");
+  await page.keyboard.down("Control");
   await drag(page, canvas, { x: 180, y: 90 }, { x: 220, y: 120 });
-  await page.keyboard.up("Alt");
+  await page.keyboard.up("Control");
   const board = page.getByRole("region", { name: "Área de desenho" });
   await expect(board).toHaveCSS("background-position", "40px 30px");
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
@@ -285,7 +285,7 @@ test("permite repetir o salvamento automático após uma falha de armazenamento"
   ]);
 });
 
-test("seleciona por arraste, alterna com Ctrl e move e apaga o conjunto", async ({ page }) => {
+test("seleciona por arraste, alterna com Shift e move e apaga o conjunto", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
   const canvas = page.locator("canvas").first();
@@ -298,9 +298,9 @@ test("seleciona por arraste, alterna com Ctrl e move e apaga o conjunto", async 
   await drag(page, canvas, { x: 200, y: 120 }, { x: 20, y: 25 });
   const multiple = page.getByText(/2 elementos selecionados/);
   await expect(multiple).toBeVisible();
-  await canvas.click({ position: { x: 177, y: 75 }, modifiers: ["Control"] });
+  await canvas.click({ position: { x: 177, y: 75 }, modifiers: ["Shift"] });
   await expect(multiple).toBeHidden();
-  await canvas.click({ position: { x: 177, y: 75 }, modifiers: ["Control"] });
+  await canvas.click({ position: { x: 177, y: 75 }, modifiers: ["Shift"] });
   await expect(multiple).toBeVisible();
 
   await drag(page, canvas, { x: 40, y: 65 }, { x: 70, y: 85 });
@@ -339,7 +339,8 @@ test("desenha à mão livre com lápis e marca-texto e ajusta a espessura pelo t
   await expect.poll(() => canvas.evaluate((node) =>
     node.getContext("2d").getImageData(80, 130, 1, 1).data[3],
   )).toBeGreaterThan(0);
-  await page.getByRole("button", { name: "Borracha" }).click();
+  await page.keyboard.press("Alt+b");
+  await expect(page.getByRole("button", { name: "Borracha" })).toHaveAttribute("aria-pressed", "true");
   const bounds = await canvas.boundingBox();
   await page.mouse.move(bounds.x + 80, bounds.y + 40);
   await page.mouse.down();

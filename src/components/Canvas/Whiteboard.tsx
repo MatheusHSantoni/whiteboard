@@ -171,7 +171,7 @@ export default function Whiteboard({
       if (!shapeId) {
         onSelect([]);
         setGesture({ ...base, type: "marquee" });
-      } else if (event.evt.ctrlKey || event.evt.metaKey) {
+      } else if (event.evt.shiftKey || event.evt.metaKey) {
         onSelect(selectedIds.includes(shapeId)
           ? selectedIds.filter((id) => id !== shapeId)
           : [...selectedIds, shapeId]);
@@ -270,8 +270,8 @@ export default function Whiteboard({
         backgroundPosition: `${offset.x}px ${offset.y}px`,
       }}
       onPointerDownCapture={(event) => {
-        if (disabled || gesture || eraseGesture.current || panGesture.current || !event.altKey || event.button !== 0) return;
-        // Intercepta Alt + arrasto antes que o canvas inicie um desenho ou mova um elemento.
+        if (disabled || gesture || eraseGesture.current || panGesture.current || !event.ctrlKey || event.button !== 0) return;
+        // Intercepta Ctrl + arrasto antes que o canvas inicie um desenho ou mova um elemento.
         event.preventDefault();
         event.stopPropagation();
         panGesture.current = {

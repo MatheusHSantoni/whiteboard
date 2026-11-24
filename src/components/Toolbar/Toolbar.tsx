@@ -13,6 +13,7 @@ const tools = [
   { id: "arrow", label: "Seta", icon: "↗", key: "A" },
   { id: "pencil", label: "Lápis", icon: "✎", key: "P" },
   { id: "marker", label: "Marca-texto", icon: "▰", key: "M" },
+  { id: "erase", label: "Borracha", icon: "◇", key: "B" },
   { id: "text", label: "Texto", icon: "T", key: "T" },
 ] as const;
 
@@ -97,11 +98,11 @@ export default function Toolbar({
           ))}
           <div>
             <dt>Mover o Board</dt>
-            <dd><kbd>Alt + arrastar</kbd></dd>
+            <dd><kbd>Ctrl + arrastar</kbd></dd>
           </div>
           <div>
             <dt>Adicionar ou remover da seleção</dt>
-            <dd><kbd>Ctrl + clique</kbd></dd>
+            <dd><kbd>Shift + clique</kbd></dd>
           </div>
           <div>
             <dt>Ajustar espessura do lápis ou marca-texto</dt>
@@ -144,7 +145,8 @@ export default function Toolbar({
         type="button"
         className="icon-tool-button"
         aria-label="Borracha"
-        title="Borracha"
+        aria-keyshortcuts="Alt+B"
+        title="Borracha (Alt + B)"
         aria-pressed={activeTool === "erase"}
         disabled={disabled}
         onClick={() => onToolChange(activeTool === "erase" ? "select" : "erase")}

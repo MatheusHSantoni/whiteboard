@@ -219,7 +219,7 @@ button:focus-visible {
 }
 
 .board-stage { position: absolute; inset: 0; }
-.quadro--rectangle, .quadro--circle, .quadro--arrow { cursor: crosshair; }
+.quadro--rectangle, .quadro--circle, .quadro--arrow, .quadro--line { cursor: crosshair; }
 .quadro--text { cursor: text; }
 .quadro--erase { cursor: crosshair; }
 .quadro--pencil { cursor: url("./assets/pencil.svg") 3 21, crosshair; }

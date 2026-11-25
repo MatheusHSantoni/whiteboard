@@ -11,6 +11,7 @@ const tools = [
   { id: "rectangle", label: "Retângulo", icon: "▭", key: "S" },
   { id: "circle", label: "Círculo", icon: "○", key: "C" },
   { id: "arrow", label: "Seta", icon: "↗", key: "A" },
+  { id: "line", label: "Linha", icon: "╱", key: "L" },
   { id: "pencil", label: "Lápis", icon: "✎", key: "P" },
   { id: "marker", label: "Marca-texto", icon: "▰", key: "M" },
   { id: "erase", label: "Borracha", icon: "◇", key: "B" },

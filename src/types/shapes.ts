@@ -1,5 +1,5 @@
 export type Point = { x: number; y: number };
-export type DrawingTool = "rectangle" | "circle" | "arrow";
+export type DrawingTool = "rectangle" | "circle" | "arrow" | "line";
 export type FreehandTool = "pencil" | "marker";
 export type Tool = "select" | "erase" | "text" | DrawingTool | FreehandTool;
 
@@ -40,7 +40,7 @@ export type Shape = PositionedShape & (
   | { type: "square"; size: number }
   | { type: "rectangle"; width: number; height: number }
   | { type: "circle"; radius: number }
-  | { type: "arrow"; dx: number; dy: number; bend?: Point }
+  | { type: "arrow" | "line"; dx: number; dy: number; bend?: Point }
   | { type: "image"; src: string; width: number; height: number }
   | { type: "text"; text: string; marks?: TextMark[]; width?: number }
   | { type: FreehandTool; points: number[]; strokeWidth: number }
@@ -65,7 +65,7 @@ export function createDrawing(
   const height = Math.abs(dy);
   if (Math.max(width, height) < 5) return null;
 
-  if (type === "arrow") return { id, type, ...start, dx, dy };
+  if (type === "arrow" || type === "line") return { id, type, ...start, dx, dy };
   if (type === "circle") return { id, type, ...start, radius: Math.hypot(dx, dy) };
   if (width === 0 || height === 0) return null;
 
@@ -86,7 +86,7 @@ export function resizeShape(shape: Shape, point: Point): Shape {
   }
   if (shape.type === "square") return { ...shape, size: Math.max(5, x, y) };
   if (shape.type === "circle") return { ...shape, radius: Math.max(5, x) };
-  if (shape.type === "arrow" && Math.hypot(x, y) >= 5) {
+  if ((shape.type === "arrow" || shape.type === "line") && Math.hypot(x, y) >= 5) {
     return { ...shape, dx: x, dy: y };
   }
   return shape;
@@ -118,6 +118,7 @@ export function isShape(value: unknown): value is Shape {
     case "circle":
       return isPositiveNumber(shape.radius);
     case "arrow":
+    case "line":
       return Number.isFinite(shape.dx) && Number.isFinite(shape.dy) &&
         (shape.dx !== 0 || shape.dy !== 0) &&
         (shape.bend === undefined || (typeof shape.bend === "object" && shape.bend !== null &&

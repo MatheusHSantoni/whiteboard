@@ -22,6 +22,7 @@ const instructions: Record<Tool, string> = {
   erase: "Arraste para apagar partes dos traços. Use Delete para apagar um traço selecionado.",
   rectangle: "Clique e arraste para desenhar um retângulo.",
   circle: "Clique no centro e arraste para definir o raio do círculo.",
+  line: "Clique e arraste para desenhar uma linha.",
   arrow: "Clique e arraste do início até a ponta da seta.",
   text: "Clique no quadro e digite. Enter confirma e Esc cancela.",
 };
@@ -34,7 +35,7 @@ export function Editor({ storage, server, deleting, navigation }: {
 }) {
   const [tool, setTool] = useState<Tool>("select");
   const [styles, setStyles] = useState<Record<Exclude<Tool, "select" | "erase">, ElementStyle>>({
-    rectangle: { noFill: true }, circle: { noFill: true }, arrow: {}, text: {},
+    rectangle: { noFill: true }, circle: { noFill: true }, arrow: {}, line: {}, text: {},
     pencil: {}, marker: { color: "#fff176" },
   });
   const [strokeWidths, setStrokeWidths] = useState({ pencil: 3, marker: 18 });
@@ -173,7 +174,7 @@ export function Editor({ storage, server, deleting, navigation }: {
   }
 
   function changeArrowBend(id: string, bend: Point) {
-    updateShape(id, (shape) => shape.type === "arrow" ? { ...shape, bend } : shape);
+    updateShape(id, (shape) => (shape.type === "arrow" || shape.type === "line") ? { ...shape, bend } : shape);
   }
 
   function eraseShapes(ids: string[], historyGroup?: symbol) {
@@ -246,6 +247,7 @@ export function Editor({ storage, server, deleting, navigation }: {
           {tool === "select" && selectedIds.length > 1
             ? `${selectedIds.length} elementos selecionados. Arraste para mover ou use Ctrl + C para copiar.`
             : selected?.type === "text" ? "Dê dois cliques para editar ou arraste a alça roxa para mudar a largura do texto." :
+            selected?.type === "line" ? "Arraste a ponta roxa para redimensionar a linha ou o ponto branco para ajustar a curva." :
             selected?.type === "arrow" ? "Arraste a ponta roxa para redimensionar a seta ou o ponto branco para ajustar a curva." :
             selected?.type === "image" ? "Arraste a alça no canto da imagem para redimensionar." :
             selected && ["square", "rectangle", "circle"].includes(selected.type)

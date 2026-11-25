@@ -34,7 +34,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   const shortcutList = page.locator("dl.shortcut-list");
   await expect(shortcutList).toBeVisible();
   await expect(shortcutList.locator("kbd")).toHaveText([
-    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + P", "Alt + M", "Alt + B", "Alt + T", "Ctrl + arrastar", "Shift + clique", "+ / −", "Ctrl + Z", "Ctrl + Y", "Ctrl + C", "Ctrl + V", "Delete", "Enter", "Ctrl + Shift + 7", "Ctrl + Shift + 8", "Ctrl + Shift + 9", "Shift + Enter", "Esc",
+    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + L", "Alt + P", "Alt + M", "Alt + B", "Alt + T", "Ctrl + arrastar", "Shift + clique", "+ / −", "Ctrl + Z", "Ctrl + Y", "Ctrl + C", "Ctrl + V", "Delete", "Enter", "Ctrl + Shift + 7", "Ctrl + Shift + 8", "Ctrl + Shift + 9", "Shift + Enter", "Esc",
   ]);
   await page.keyboard.press("Enter");
   await expect(shortcutList).toBeHidden();
@@ -541,4 +541,19 @@ test("cola um retângulo, texto e traço de lápis como elementos editáveis", a
   ]);
   const shapes = await page.evaluate(savedShapes);
   expect(shapes[5].points).toEqual(shapes[2].points);
+});
+
+test("desenha uma linha sem ponta e ajusta a curva pelo ponto de controle", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  const canvas = page.locator("canvas").first();
+  await page.keyboard.press("Alt+l");
+  await drag(page, canvas, { x: 180, y: 100 }, { x: 280, y: 100 });
+  await page.keyboard.press("Alt+v");
+  await canvas.click({ position: { x: 190, y: 100 } });
+  await drag(page, canvas, { x: 230, y: 100 }, { x: 230, y: 145 });
+  await drag(page, canvas, { x: 280, y: 100 }, { x: 320, y: 80 });
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "line", dx: 140, dy: -20, bend: { x: 50, y: 45 } }),
+  ]);
 });

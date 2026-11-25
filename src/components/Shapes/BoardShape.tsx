@@ -27,10 +27,11 @@ export default function BoardShape({
   const stroke = shape.color ?? DEFAULT_DRAWING_COLOR;
 
   const [dragBend, setDragBend] = useState<Point>();
-  const curve = dragBend ?? (shape.type === "arrow" ? shape.bend : undefined);
-  const bend = shape.type === "arrow" ? curve ?? { x: shape.dx / 2, y: shape.dy / 2 } : null;
+  const isLine = shape.type === "arrow" || shape.type === "line";
+  const curve = dragBend ?? (isLine ? shape.bend : undefined);
+  const bend = isLine ? curve ?? { x: shape.dx / 2, y: shape.dy / 2 } : null;
 
-  const resizePoint = shape.type === "arrow" ? { x: shape.dx, y: shape.dy } :
+  const resizePoint = isLine ? { x: shape.dx, y: shape.dy } :
     shape.type === "rectangle" ? { x: shape.width, y: shape.height } :
     shape.type === "square" ? { x: shape.size, y: shape.size } :
     shape.type === "circle" ? { x: shape.radius, y: 0 } :
@@ -62,10 +63,11 @@ export default function BoardShape({
       {shape.type === "image" && selected && !showHandles && (
         <Rect width={shape.width} height={shape.height} stroke="#583ce0" dash={[6, 4]} listening={false} />
       )}
-      {shape.type === "arrow" && (
+      {isLine && (
         <Arrow
           points={curve ? [0, 0, curve.x, curve.y, shape.dx, shape.dy] : [0, 0, shape.dx, shape.dy]}
           tension={curve ? 0.45 : 0}
+          pointerAtEnding={shape.type === "arrow"}
           stroke={stroke}
           fill={stroke}
           strokeWidth={3}

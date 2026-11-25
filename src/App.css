@@ -25,6 +25,25 @@ body { margin: 0; }
 
 .app-header { justify-content: space-between; }
 
+.board-header-controls, .board-surface {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.board-header-controls { gap: 16px; }
+
+.board-surface {
+  color: #293452;
+  font-size: 0.875rem;
+}
+
+.board-surface input {
+  width: 92px;
+  accent-color: #583ce0;
+}
+
 h1 {
   margin: 0;
   font-size: clamp(1.4rem, 3vw, 2rem);
@@ -225,6 +244,16 @@ button:focus-visible {
 }
 
 .board-stage { position: absolute; inset: 0; }
+.quadro[data-surface="white"] { background-color: #fff; }
+
+.quadro[data-surface="dark"] {
+  background-color: #121212;
+  background-image: radial-gradient(circle, #414141 1px, transparent 1px);
+}
+
+.quadro[data-surface="dark"] .text-editor { caret-color: #fff; }
+.quadro[data-surface="dark"] .text-format { color: #293452; }
+
 .quadro--rectangle, .quadro--circle, .quadro--arrow, .quadro--line { cursor: crosshair; }
 .quadro--text { cursor: text; }
 .quadro--pencil { cursor: url("./assets/pencil.svg") 3 21, crosshair; }

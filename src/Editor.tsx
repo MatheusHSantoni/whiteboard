@@ -11,6 +11,12 @@ import { isShapeList, MAX_STROKE_WIDTH, resizeShape, type FreehandTool, type Ele
 const BOARD_CLIPBOARD_TYPE = "application/x-whiteboard-shapes+json";
 const PASTE_OFFSET = 20;
 
+const BOARD_SURFACES = [
+  { id: "white", label: "Branco" },
+  { id: "warm", label: "Amarelado" },
+  { id: "dark", label: "Preto" },
+] as const;
+
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 200;
 const ZOOM_STEP = 25;
@@ -40,6 +46,8 @@ export function Editor({ storage, server, deleting, navigation }: {
   });
   const [strokeWidths, setStrokeWidths] = useState({ pencil: 3, marker: 18 });
   const [selection, setSelectedIds] = useState<string[]>([]);
+  const [surfaceIndex, setSurfaceIndex] = useState(1);
+  const surface = BOARD_SURFACES[surfaceIndex];
   const [zoom, setZoom] = useState(100);
   const [imageError, setImageError] = useState("");
   const [importing, setImporting] = useState(false);
@@ -218,7 +226,22 @@ export function Editor({ storage, server, deleting, navigation }: {
     <main className="app">
       <header className="app-header">
         <h1>Whiteboard</h1>
-        {!disabled && !board.saveFailed && <span className="save-status" role="status">{status}</span>}
+        <div className="board-header-controls">
+          {!disabled && !board.saveFailed && <span className="save-status" role="status">{status}</span>}
+          <label className="board-surface">
+            Fundo da lousa
+            <input
+              type="range"
+              min={0}
+              max={BOARD_SURFACES.length - 1}
+              step={1}
+              value={surfaceIndex}
+              aria-valuetext={surface.label}
+              onChange={(event) => setSurfaceIndex(event.currentTarget.valueAsNumber)}
+            />
+            <span aria-hidden="true">{surface.label}</span>
+          </label>
+        </div>
       </header>
 
       <div className="board-library">
@@ -280,6 +303,7 @@ export function Editor({ storage, server, deleting, navigation }: {
           drawingStyle={drawingStyle}
           strokeWidth={strokeWidth}
           scale={zoom / 100}
+          surface={surface.id}
           onErase={eraseAt}
           selectedIds={selectedIds}
           onSelect={setSelectedIds}

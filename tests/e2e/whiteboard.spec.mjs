@@ -562,3 +562,41 @@ test("desenha uma linha sem ponta e ajusta a curva pelo ponto de controle", asyn
     expect.objectContaining({ type: "line", dx: 140, dy: -20, bend: { x: 50, y: 45 } }),
   ]);
 });
+
+test("alterna os fundos e exibe textos antigos e novos em branco no fundo preto", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  const surface = page.getByRole("slider", { name: "Fundo da lousa" });
+  const board = page.getByRole("region", { name: "Área de desenho" });
+  const canvas = page.locator("canvas").first();
+  const editor = page.getByRole("textbox", { name: "Texto do elemento" });
+  await expect(surface).toHaveAttribute("aria-valuetext", "Amarelado");
+  await page.keyboard.press("Alt+t");
+  await page.getByLabel("Cor da ferramenta").fill("#d71920");
+  await canvas.click({ position: { x: 50, y: 90 } });
+  await editor.fill("Primeiro texto");
+  await editor.press("Enter");
+
+  await surface.press("End");
+  await expect(surface).toHaveAttribute("aria-valuetext", "Preto");
+  await expect(board).toHaveCSS("background-color", "rgb(18, 18, 18)");
+  await canvas.click({ position: { x: 50, y: 140 } });
+  await editor.fill("Segundo texto");
+  await expect(editor).toHaveCSS("caret-color", "rgb(255, 255, 255)");
+  await editor.press("Enter");
+
+  async function hasColor(y, red, green, blue) {
+    return canvas.evaluate((node, args) => {
+      const pixels = node.getContext("2d").getImageData(50, args.y, 230, 28).data;
+      return pixels.some((value, index) => index % 4 === 0 && value === args.red &&
+        pixels[index + 1] === args.green && pixels[index + 2] === args.blue && pixels[index + 3] === 255);
+    }, { y, red, green, blue });
+  }
+  await expect.poll(() => hasColor(90, 255, 255, 255)).toBe(true);
+  await expect.poll(() => hasColor(140, 255, 255, 255)).toBe(true);
+  await surface.press("Home");
+  await expect(surface).toHaveAttribute("aria-valuetext", "Branco");
+  await expect(board).toHaveCSS("background-color", "rgb(255, 255, 255)");
+  await expect.poll(() => hasColor(90, 215, 25, 32)).toBe(true);
+  await expect.poll(() => hasColor(140, 215, 25, 32)).toBe(true);
+});

@@ -1,7 +1,7 @@
 import type { CharRenderProps } from "konva/lib/shapes/Text";
 import { DEFAULT_FONT_SIZE, type Shape } from "../../types/shapes";
 
-export function textCharacterStyle(shape: Extract<Shape, { type: "text" }>) {
+export function textCharacterStyle(shape: Extract<Shape, { type: "text" }>, dark = false) {
   const marks = new Map(shape.marks?.map((mark) => [mark.index, mark]));
   const fontSize = shape.fontSize ?? DEFAULT_FONT_SIZE;
   let cursor = 0;
@@ -16,10 +16,10 @@ export function textCharacterStyle(shape: Extract<Shape, { type: "text" }>) {
     const mark = marks.get(start);
     if (mark?.highlight) {
       context.save();
-      context.fillStyle = mark.highlight;
+      context.fillStyle = dark ? `${mark.highlight}66` : mark.highlight;
       context.fillRect(x, y - fontSize * 0.85, width, fontSize);
       context.restore();
     }
-    if (mark?.color) context.fillStyle = mark.color;
+    if (!dark && mark?.color) context.fillStyle = mark.color;
   };
 }

@@ -13,6 +13,7 @@ type BoardShapeProps = {
   shape: Shape;
   selected?: boolean;
   showHandles?: boolean;
+  dark?: boolean;
   preview?: boolean;
   onImageResize?: (id: string, width: number, height: number) => void;
   onResize?: (id: string, point: Point) => void;
@@ -20,7 +21,7 @@ type BoardShapeProps = {
 };
 
 export default function BoardShape({
-  shape: savedShape, selected, showHandles, preview, onImageResize, onResize, onArrowBend,
+  shape: savedShape, selected, showHandles, dark, preview, onImageResize, onResize, onArrowBend,
 }: BoardShapeProps) {
   const [dragSize, setDragSize] = useState<Point>();
   const shape = dragSize ? resizeShape(savedShape, dragSize) : savedShape;
@@ -134,13 +135,13 @@ export default function BoardShape({
       {shape.type === "text" && (
         <Text
           text={shape.text}
-          charRenderFunc={shape.marks?.length ? textCharacterStyle(shape) : undefined}
+          charRenderFunc={shape.marks?.length ? textCharacterStyle(shape, dark) : undefined}
           width={shape.width ?? DEFAULT_TEXT_WIDTH}
           padding={4}
           fontSize={shape.fontSize ?? DEFAULT_FONT_SIZE}
           fontStyle={shape.bold ? "bold" : "normal"}
           fontFamily={FONTS[shape.font ?? "system"].stack}
-          fill={stroke}
+          fill={dark ? "#fff" : stroke}
           textDecoration={selected ? "underline" : undefined}
         />
       )}

@@ -12,6 +12,7 @@ const highlights = [
 
 type InlineTextEditorProps = {
   initialText: string;
+  dark: boolean;
   initialMarks: TextMark[];
   style: CSSProperties;
   onCommit: (text: string, marks: TextMark[]) => void;
@@ -36,7 +37,7 @@ function updateMarks(previous: string, next: string, marks: TextMark[]) {
   });
 }
 
-export default function InlineTextEditor({ initialText, initialMarks, style, onCommit, onCancel }: InlineTextEditorProps) {
+export default function InlineTextEditor({ initialText, initialMarks, dark, style, onCommit, onCancel }: InlineTextEditorProps) {
   const [text, setText] = useState(initialText);
   const [marks, setMarks] = useState(initialMarks);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
@@ -80,7 +81,7 @@ export default function InlineTextEditor({ initialText, initialMarks, style, onC
         {Array.from(text).reduce<{ index: number; nodes: React.ReactNode[] }>((result, char) => {
           const mark = styles.get(result.index);
           result.nodes.push(mark
-            ? <span key={result.index} style={{ color: mark.color, backgroundColor: mark.highlight }}>{char}</span>
+            ? <span key={result.index} style={{ color: dark ? undefined : mark.color, backgroundColor: dark && mark.highlight ? `${mark.highlight}66` : mark.highlight }}>{char}</span>
             : char);
           result.index += char.length;
           return result;

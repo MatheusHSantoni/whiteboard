@@ -129,6 +129,14 @@ export default function Toolbar({
             <dd><kbd>Ctrl + Y</kbd></dd>
           </div>
           <div>
+            <dt>Copiar seleção</dt>
+            <dd><kbd>Ctrl + C</kbd></dd>
+          </div>
+          <div>
+            <dt>Colar elementos</dt>
+            <dd><kbd>Ctrl + V</kbd></dd>
+          </div>
+          <div>
             <dt>Apagar seleção</dt>
             <dd><kbd>Delete</kbd></dd>
           </div>

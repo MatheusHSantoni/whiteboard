@@ -34,7 +34,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   const shortcutList = page.locator("dl.shortcut-list");
   await expect(shortcutList).toBeVisible();
   await expect(shortcutList.locator("kbd")).toHaveText([
-    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + P", "Alt + M", "Alt + B", "Alt + T", "Ctrl + arrastar", "Shift + clique", "+ / −", "Ctrl + Z", "Ctrl + Y", "Delete", "Enter", "Ctrl + Shift + 7", "Ctrl + Shift + 8", "Ctrl + Shift + 9", "Shift + Enter", "Esc",
+    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + P", "Alt + M", "Alt + B", "Alt + T", "Ctrl + arrastar", "Shift + clique", "+ / −", "Ctrl + Z", "Ctrl + Y", "Ctrl + C", "Ctrl + V", "Delete", "Enter", "Ctrl + Shift + 7", "Ctrl + Shift + 8", "Ctrl + Shift + 9", "Shift + Enter", "Esc",
   ]);
   await page.keyboard.press("Enter");
   await expect(shortcutList).toBeHidden();
@@ -472,4 +472,29 @@ test("aplica os três atalhos de lista e salva a formatação", async ({ page })
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
     expect.objectContaining({ type: "text", text: "☐ Primeiro\n☐ Segundo" }),
   ]);
+});
+
+test("copia e cola elementos selecionados com Ctrl C e Ctrl V", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  const canvas = page.locator("canvas").first();
+  await page.keyboard.press("Alt+s");
+  await drag(page, canvas, { x: 40, y: 50 }, { x: 90, y: 90 });
+  await page.keyboard.press("Alt+c");
+  await drag(page, canvas, { x: 155, y: 75 }, { x: 177, y: 75 });
+  await page.keyboard.press("Alt+v");
+  await drag(page, canvas, { x: 200, y: 120 }, { x: 20, y: 25 });
+
+  await page.keyboard.press("Control+c");
+  await page.keyboard.press("Control+v");
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "rectangle", x: 40, y: 50 }),
+    expect.objectContaining({ type: "circle", x: 155, y: 75 }),
+    expect.objectContaining({ type: "rectangle", x: 60, y: 70 }),
+    expect.objectContaining({ type: "circle", x: 175, y: 95 }),
+  ]);
+  const shapes = await page.evaluate(savedShapes);
+  expect(new Set(shapes.map(({ id }) => id)).size).toBe(4);
+  await page.keyboard.press("Control+z");
+  await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(2);
 });

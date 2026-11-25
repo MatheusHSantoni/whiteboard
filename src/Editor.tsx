@@ -1,11 +1,14 @@
 import "./App.css";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { downloadBackup, type BoardStorage } from "./utils/boardLibrary";
 import Whiteboard from "./components/Canvas/Whiteboard";
 import Toolbar from "./components/Toolbar/Toolbar";
 import { readBoardImage } from "./utils/boardImage";
 import { useWhiteboard } from "./hooks/useWhiteboard";
-import { MAX_STROKE_WIDTH, resizeShape, type FreehandTool, type ElementStyle, type Point, type Shape, type TextMark, type Tool } from "./types/shapes";
+import { isShapeList, MAX_STROKE_WIDTH, resizeShape, type FreehandTool, type ElementStyle, type Point, type Shape, type TextMark, type Tool } from "./types/shapes";
+
+const BOARD_CLIPBOARD_TYPE = "application/x-whiteboard-shapes+json";
+const PASTE_OFFSET = 20;
 
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 200;
@@ -72,6 +75,62 @@ export function Editor({ storage, server, deleting, navigation }: {
     }
   }
   const disabled = board.loading || board.loadFailed || deleting;
+  const previousPaste = useRef<{ payload: string; offset: number } | null>(null);
+
+  useEffect(() => {
+    if (disabled) return;
+
+    function canUseClipboard(event: ClipboardEvent): boolean {
+      const target = event.target;
+      return !event.defaultPrevented && !(target instanceof HTMLElement &&
+        (target.isContentEditable || target.closest("input, textarea, select")));
+    }
+
+    function copy(event: ClipboardEvent) {
+      if (!canUseClipboard(event) || tool !== "select" || !selectedIds.length ||
+          !event.clipboardData || window.getSelection()?.isCollapsed === false) return;
+      const ids = new Set(selectedIds);
+      event.clipboardData.setData(BOARD_CLIPBOARD_TYPE, JSON.stringify(
+        board.shapes.filter((shape) => ids.has(shape.id)),
+      ));
+      previousPaste.current = null;
+      event.preventDefault();
+    }
+
+    function paste(event: ClipboardEvent) {
+      if (!canUseClipboard(event)) return;
+      const payload = event.clipboardData?.getData(BOARD_CLIPBOARD_TYPE);
+      if (!payload) return;
+
+      let data: unknown;
+      try {
+        data = JSON.parse(payload);
+      } catch {
+        return;
+      }
+      if (!isShapeList(data) || !data.length) return;
+      const last = previousPaste.current;
+      const offset = last?.payload === payload ? last.offset + PASTE_OFFSET : PASTE_OFFSET;
+      previousPaste.current = { payload, offset };
+      const copies = data.map((shape) => ({
+        ...shape,
+        id: crypto.randomUUID(),
+        x: shape.x + offset,
+        y: shape.y + offset,
+      }));
+      event.preventDefault();
+      board.setShapes((shapes) => [...shapes, ...copies]);
+      setSelectedIds(copies.map(({ id }) => id));
+      setTool("select");
+    }
+
+    window.addEventListener("copy", copy);
+    window.addEventListener("paste", paste);
+    return () => {
+      window.removeEventListener("copy", copy);
+      window.removeEventListener("paste", paste);
+    };
+  }, [board.shapes, board.setShapes, disabled, selectedIds, tool]);
 
   async function importImage(file: File) {
     setImageError("");

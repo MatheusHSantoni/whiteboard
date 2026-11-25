@@ -36,3 +36,12 @@ test("rejeita coordenadas inválidas e textos vazios ou longos demais", () => {
   assert.equal(isShape({ ...text, text: "x".repeat(501) }), false);
   assert.equal(isShape({ ...text, x: Infinity, text: "Olá" }), false);
 });
+
+test("rejeita lacunas nas coordenadas de traços e nas marcações de texto", () => {
+  const stroke = { id: "p", type: "pencil", x: 0, y: 0, strokeWidth: 3 };
+  const text = { id: "t", type: "text", x: 0, y: 0, text: "Olá" };
+  assert.equal(isShape({ ...stroke, points: [0, 1] }), true);
+  assert.equal(isShape({ ...stroke, points: Array(2) }), false);
+  assert.equal(isShape({ ...text, marks: [{ index: 0, color: "#123abc" }] }), true);
+  assert.equal(isShape({ ...text, marks: Array(1) }), false);
+});

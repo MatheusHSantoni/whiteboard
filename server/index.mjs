@@ -67,8 +67,14 @@ async function api(request, response, path) {
   const match = /^\/api\/boards\/([a-f0-9-]{36})$/.exec(path);
   if (match && method === "GET") {
     const board = select.get(match[1]);
-    return board ? json(response, 200, { ...board, shapes: JSON.parse(board.shapes) }) :
-      json(response, 404, { error: "Board não encontrado." });
+    if (!board) return json(response, 404, { error: "Board não encontrado." });
+    let shapes;
+    try {
+      shapes = JSON.parse(board.shapes);
+    } catch {
+      throw new Error("JSON inválido no Board armazenado: " + match[1]);
+    }
+    return json(response, 200, { shapes, revision: board.revision });
   }
 
   if (match && method === "DELETE") {
@@ -81,7 +87,14 @@ async function api(request, response, path) {
   if ((path === "/api/boards" && method === "POST") || (match && method === "PUT")) {
     // The custom header prevents writes from cross-origin HTML forms.
     if (request.headers["x-whiteboard"] !== "1") return json(response, 403, {});
-    const data = await readJson(request);
+    let data;
+    try {
+      data = await readJson(request);
+    } catch (error) {
+      if (error instanceof RangeError) return json(response, 413, { error: "O Board excede 50 MB." });
+      if (error instanceof SyntaxError) return json(response, 400, { error: "Não foi possível concluir a operação." });
+      throw error;
+    }
     if (!isShapeList(data?.shapes)) return json(response, 400, { error: "Board inválido." });
     const shapes = JSON.stringify(data.shapes);
     if (method === "POST") {
@@ -123,9 +136,8 @@ const server = createServer(async (request, response) => {
     response.writeHead(200, { "Content-Type": type });
     createReadStream(file).on("error", () => response.destroy()).pipe(response);
   } catch (error) {
-    const status = error instanceof RangeError ? 413 : error instanceof SyntaxError ? 400 : 500;
-    if (status === 500) console.error(error);
-    json(response, status, { error: status === 413 ? "O Board excede 50 MB." : "Não foi possível concluir a operação." });
+    console.error(error);
+    json(response, 500, { error: "Não foi possível concluir a operação." });
   }
 });
 

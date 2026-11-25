@@ -50,6 +50,15 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
     .toHaveCSS("background-size", "15px 15px");
   await zoom.getByRole("button", { name: "75%" }).click();
   await expect(zoom.getByRole("button", { name: "100%" })).toBeVisible();
+  const boardArea = page.getByRole("region", { name: "Área de desenho" });
+  await boardArea.hover();
+  await page.keyboard.down("Control");
+  await page.mouse.wheel(0, -100);
+  await expect(zoom.getByRole("button", { name: "125%" })).toBeVisible();
+  await expect(boardArea).toHaveCSS("background-size", "25px 25px");
+  await page.mouse.wheel(0, 100);
+  await expect(zoom.getByRole("button", { name: "100%" })).toBeVisible();
+  await page.keyboard.up("Control");
 
   const color = page.getByLabel("Cor da ferramenta");
   await expect(color).toBeDisabled();

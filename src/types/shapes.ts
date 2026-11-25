@@ -136,7 +136,7 @@ export function isShape(value: unknown): value is Shape {
         shape.strokeWidth <= MAX_STROKE_WIDTH &&
         Array.isArray(shape.points) && shape.points.length >= 2 &&
         shape.points.length <= MAX_STROKE_POINTS * 2 && shape.points.length % 2 === 0 &&
-        shape.points.every(Number.isFinite);
+        validStrokePoints(shape.points);
     case "text":
       return typeof shape.text === "string" && shape.text.length <= MAX_TEXT_LENGTH &&
         shape.text.trim().length > 0 && validTextMarks(shape.marks, shape.text.length) &&
@@ -147,17 +147,25 @@ export function isShape(value: unknown): value is Shape {
   }
 }
 
+function validStrokePoints(points: unknown[]): boolean {
+  for (const point of points) {
+    if (!Number.isFinite(point)) return false;
+  }
+  return true;
+}
+
 function validTextMarks(value: unknown, length: number): boolean {
   if (value === undefined) return true;
   if (!Array.isArray(value) || value.length > length) return false;
   const indexes = new Set<number>();
-  return value.every((mark) => {
+  for (const mark of value) {
     if (!mark || typeof mark !== "object" || !Number.isInteger(mark.index) ||
         mark.index < 0 || mark.index >= length || indexes.has(mark.index)) return false;
     indexes.add(mark.index);
-    return [mark.color, mark.highlight].every((color) =>
-      color === undefined || (typeof color === "string" && /^#[\da-f]{6}$/i.test(color)));
-  });
+    if (![mark.color, mark.highlight].every((color) =>
+      color === undefined || (typeof color === "string" && /^#[\da-f]{6}$/i.test(color)))) return false;
+  }
+  return true;
 }
 
 export function isShapeList(value: unknown): value is Shape[] {

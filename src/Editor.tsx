@@ -1,5 +1,5 @@
 import "./App.css";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { downloadBackup, type BoardStorage } from "./utils/boardLibrary";
 import Whiteboard from "./components/Canvas/Whiteboard";
 import Toolbar from "./components/Toolbar/Toolbar";
@@ -31,6 +31,10 @@ const MIN_ZOOM = 50;
 const MAX_ZOOM = 200;
 const ZOOM_STEP = 25;
 
+function stepZoom(zoom: number, direction: number) {
+  return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom + direction * ZOOM_STEP));
+}
+
 const instructions: Record<Tool, string> = {
   select: "Clique em um elemento ou arraste numa área vazia para selecionar vários.",
   pencil: "Arraste para desenhar livremente.",
@@ -59,9 +63,26 @@ export function Editor({ storage, server, deleting, navigation }: {
   const [surfacePercent, setSurfacePercent] = useState(50);
   const surface = getBoardSurface(surfacePercent);
   const [zoom, setZoom] = useState(100);
+  const boardArea = useRef<HTMLDivElement>(null);
   const [imageError, setImageError] = useState("");
   const [importing, setImporting] = useState(false);
   const board = useWhiteboard(storage);
+  useEffect(() => {
+    const area = boardArea.current;
+    if (!area) return;
+
+    function handleWheel(event: WheelEvent) {
+      if (!event.ctrlKey || event.deltaY === 0) return;
+      event.preventDefault();
+      const direction = event.deltaY < 0 ? 1 : -1;
+      setZoom((value) => stepZoom(value, direction));
+    }
+
+    // O listener precisa ser não passivo para impedir o zoom do navegador.
+    area.addEventListener("wheel", handleWheel, { passive: false });
+    return () => area.removeEventListener("wheel", handleWheel);
+  }, []);
+
   useEffect(() => {
     if (!board.dirty) return;
     function confirmExit(event: BeforeUnloadEvent) {
@@ -71,14 +92,19 @@ export function Editor({ storage, server, deleting, navigation }: {
     window.addEventListener("beforeunload", confirmExit);
     return () => window.removeEventListener("beforeunload", confirmExit);
   }, [board.dirty]);
-  const selectedIds = selection.filter((id) => board.shapes.some((shape) => shape.id === id));
+  const selectedIds = useMemo(() => {
+    if (!selection.length) return selection;
+    const existing = new Set(board.shapes.map(({ id }) => id));
+    return selection.filter((id) => existing.has(id));
+  }, [board.shapes, selection]);
+  const selectedIdSet = useMemo(() => new Set(selectedIds), [selectedIds]);
   const selected = tool === "select" && selectedIds.length === 1
     ? board.shapes.find(({ id }) => id === selectedIds[0]) : undefined;
   const groupStyle = tool === "select" && selectedIds.length > 1
-    ? board.shapes.find((shape) => shape.type !== "image" && selectedIds.includes(shape.id))
+    ? board.shapes.find((shape) => shape.type !== "image" && selectedIdSet.has(shape.id))
     : undefined;
   const mixedColors = groupStyle && board.shapes.some((shape) =>
-    shape.type !== "image" && selectedIds.includes(shape.id) &&
+    shape.type !== "image" && selectedIdSet.has(shape.id) &&
     (shape.color ?? DEFAULT_DRAWING_COLOR) !== (groupStyle.color ?? DEFAULT_DRAWING_COLOR),
   );
   const drawingStyle = tool === "select" || tool === "erase" ? undefined : styles[tool];
@@ -101,9 +127,8 @@ export function Editor({ storage, server, deleting, navigation }: {
       updateShape(selected.id, (shape) => ({ ...shape, ...patch }));
     } else if (groupStyle && patch.color !== undefined) {
       const { color } = patch;
-      const ids = new Set(selectedIds);
       board.setShapes((shapes) => shapes.map((shape) =>
-        shape.type !== "image" && ids.has(shape.id) && shape.color !== color
+        shape.type !== "image" && selectedIdSet.has(shape.id) && shape.color !== color
           ? { ...shape, color }
           : shape,
       ));
@@ -124,9 +149,8 @@ export function Editor({ storage, server, deleting, navigation }: {
     function copy(event: ClipboardEvent) {
       if (!canUseClipboard(event) || tool !== "select" || !selectedIds.length ||
           !event.clipboardData || window.getSelection()?.isCollapsed === false) return;
-      const ids = new Set(selectedIds);
       event.clipboardData.setData(BOARD_CLIPBOARD_TYPE, JSON.stringify(
-        board.shapes.filter((shape) => ids.has(shape.id)),
+        board.shapes.filter((shape) => selectedIdSet.has(shape.id)),
       ));
       previousPaste.current = null;
       event.preventDefault();
@@ -165,7 +189,7 @@ export function Editor({ storage, server, deleting, navigation }: {
       window.removeEventListener("copy", copy);
       window.removeEventListener("paste", paste);
     };
-  }, [board.shapes, board.setShapes, disabled, selectedIds, tool]);
+  }, [board.shapes, board.setShapes, disabled, selectedIds, selectedIdSet, tool]);
 
   async function importImage(file: File) {
     setImageError("");
@@ -323,7 +347,7 @@ export function Editor({ storage, server, deleting, navigation }: {
         </div>
       )}
 
-      <div className="board-area">
+      <div className="board-area" ref={boardArea}>
         <Whiteboard
           tool={tool}
           drawingStyle={drawingStyle}
@@ -347,7 +371,7 @@ export function Editor({ storage, server, deleting, navigation }: {
             type="button"
             aria-label="Diminuir zoom"
             disabled={zoom <= MIN_ZOOM}
-            onClick={() => setZoom((value) => Math.max(MIN_ZOOM, value - ZOOM_STEP))}
+            onClick={() => setZoom((value) => stepZoom(value, -1))}
           >−</button>
           <button type="button" title="Restaurar zoom para 100%" onClick={() => setZoom(100)}>
             {zoom}%
@@ -356,7 +380,7 @@ export function Editor({ storage, server, deleting, navigation }: {
             type="button"
             aria-label="Aumentar zoom"
             disabled={zoom >= MAX_ZOOM}
-            onClick={() => setZoom((value) => Math.min(MAX_ZOOM, value + ZOOM_STEP))}
+            onClick={() => setZoom((value) => stepZoom(value, 1))}
           >+</button>
         </div>
       </div>

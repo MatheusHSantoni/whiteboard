@@ -360,6 +360,7 @@ test("desenha à mão livre com lápis e marca-texto e ajusta a espessura pelo t
     node.getContext("2d").getImageData(80, 130, 1, 1).data[3],
   )).toBeGreaterThan(0);
   await page.keyboard.press("Alt+b");
+  await expect(canvas).toHaveCSS("cursor", /data:image\/svg\+xml.*9 9, default/);
   await expect(page.getByRole("button", { name: "Borracha" })).toHaveAttribute("aria-pressed", "true");
   const bounds = await canvas.boundingBox();
   await page.mouse.move(bounds.x + 80, bounds.y + 40);

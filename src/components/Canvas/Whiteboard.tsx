@@ -35,6 +35,10 @@ function makeStroke(gesture: StrokeGesture, id: string, points: number[]): Shape
   };
 }
 
+const ERASER_RADIUS = 8;
+const eraserCursorSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${ERASER_RADIUS * 2 + 2}" height="${ERASER_RADIUS * 2 + 2}"><circle cx="${ERASER_RADIUS + 1}" cy="${ERASER_RADIUS + 1}" r="${ERASER_RADIUS}" fill="none" stroke="white" stroke-width="2"/><circle cx="${ERASER_RADIUS + 1}" cy="${ERASER_RADIUS + 1}" r="${ERASER_RADIUS}" fill="none" stroke="#293452"/></svg>`;
+const ERASER_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(eraserCursorSvg)}") ${ERASER_RADIUS + 1} ${ERASER_RADIUS + 1}, default`;
+
 type EraseGesture = {
   historyGroup: symbol;
   pointerId: number;
@@ -138,7 +142,7 @@ export default function Whiteboard({
     // Uma edição pode deixar o canvas de interação desatualizado até a próxima pintura.
     active.refreshHitCanvas = true;
     const inverse = canvasLayer.getAbsoluteTransform().copy().invert();
-    onErase(hits, inverse.point(previous), inverse.point(point), 8 / scale, active.historyGroup);
+    onErase(hits, inverse.point(previous), inverse.point(point), ERASER_RADIUS / scale, active.historyGroup);
   }
 
   function stopErase(pointerId: number) {
@@ -268,6 +272,7 @@ export default function Whiteboard({
       className={`quadro quadro--${tool}${panning ? " quadro--panning" : ""}`}
       aria-label="Área de desenho"
       style={{
+        cursor: tool === "erase" && !panning ? ERASER_CURSOR : undefined,
         backgroundSize: `${20 * scale}px ${20 * scale}px`,
         backgroundPosition: `${offset.x}px ${offset.y}px`,
       }}

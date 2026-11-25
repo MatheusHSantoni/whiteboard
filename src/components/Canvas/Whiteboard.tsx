@@ -58,7 +58,7 @@ type WhiteboardProps = {
   drawingStyle?: ElementStyle;
   strokeWidth?: number;
   scale: number;
-  surface: "white" | "warm" | "dark";
+  surface: { color: string; dark: boolean };
   onErase: (ids: string[], from: Point, to: Point, radius: number, historyGroup: symbol) => void;
   selectedIds: string[];
   onSelect: (ids: string[]) => void;
@@ -272,9 +272,10 @@ export default function Whiteboard({
       ref={container}
       className={`quadro quadro--${tool}${panning ? " quadro--panning" : ""}`}
       aria-label="Área de desenho"
-      data-surface={surface}
+      data-surface={surface.dark ? "dark" : undefined}
       style={{
         cursor: tool === "erase" && !panning ? ERASER_CURSOR : undefined,
+        backgroundColor: surface.color,
         backgroundSize: `${20 * scale}px ${20 * scale}px`,
         backgroundPosition: `${offset.x}px ${offset.y}px`,
       }}
@@ -341,7 +342,7 @@ export default function Whiteboard({
                 y: shape.y + moving.current.y - moving.start.y,
               } : shape}
               selected={selected.has(shape.id)}
-              dark={surface === "dark"}
+              dark={surface.dark}
               showHandles={selected.size === 1 && selected.has(shape.id)}
               onImageResize={onImageResize}
               onResize={onResize}
@@ -355,14 +356,14 @@ export default function Whiteboard({
       {textPosition && (
         <InlineTextEditor
           initialText={textPosition.text ?? ""}
-          dark={surface === "dark"}
+          dark={surface.dark}
           initialMarks={textPosition.marks ?? []}
           style={{
             left: offset.x + textPosition.x * scale,
             top: offset.y + textPosition.y * scale,
             transform: `scale(${scale})`,
             transformOrigin: "top left",
-            color: surface === "dark" ? "#fff" : textPosition.color,
+            color: surface.dark ? "#fff" : textPosition.color,
             fontFamily: FONTS[textPosition.font ?? "system"].stack,
             fontSize: textPosition.fontSize ?? DEFAULT_FONT_SIZE,
             fontWeight: textPosition.bold ? "bold" : "normal",

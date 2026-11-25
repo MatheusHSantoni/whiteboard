@@ -11,11 +11,21 @@ import { isShapeList, MAX_STROKE_WIDTH, resizeShape, type FreehandTool, type Ele
 const BOARD_CLIPBOARD_TYPE = "application/x-whiteboard-shapes+json";
 const PASTE_OFFSET = 20;
 
-const BOARD_SURFACES = [
-  { id: "white", label: "Branco" },
-  { id: "warm", label: "Amarelado" },
-  { id: "dark", label: "Preto" },
-] as const;
+const BOARD_SURFACES = [[255, 255, 255], [255, 253, 243], [18, 18, 18]] as const;
+
+function getBoardSurface(percent: number) {
+  const [start, end] = percent <= 50 ? BOARD_SURFACES.slice(0, 2) : BOARD_SURFACES.slice(1);
+  const progress = (percent <= 50 ? percent : percent - 50) / 50;
+  const [r, g, b] = start.map((value, index) => Math.round(value + (end[index] - value) * progress));
+  const [red, green, blue] = [r, g, b].map((channel) => {
+    const srgb = channel / 255;
+    return srgb <= 0.04045 ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+  });
+  return {
+    color: `rgb(${r}, ${g}, ${b})`,
+    dark: 0.2126 * red + 0.7152 * green + 0.0722 * blue <= 0.18,
+  };
+}
 
 const MIN_ZOOM = 50;
 const MAX_ZOOM = 200;
@@ -46,8 +56,8 @@ export function Editor({ storage, server, deleting, navigation }: {
   });
   const [strokeWidths, setStrokeWidths] = useState({ pencil: 3, marker: 18 });
   const [selection, setSelectedIds] = useState<string[]>([]);
-  const [surfaceIndex, setSurfaceIndex] = useState(1);
-  const surface = BOARD_SURFACES[surfaceIndex];
+  const [surfacePercent, setSurfacePercent] = useState(50);
+  const surface = getBoardSurface(surfacePercent);
   const [zoom, setZoom] = useState(100);
   const [imageError, setImageError] = useState("");
   const [importing, setImporting] = useState(false);
@@ -229,17 +239,17 @@ export function Editor({ storage, server, deleting, navigation }: {
         <div className="board-header-controls">
           {!disabled && !board.saveFailed && <span className="save-status" role="status">{status}</span>}
           <label className="board-surface">
-            Fundo da lousa
             <input
               type="range"
               min={0}
-              max={BOARD_SURFACES.length - 1}
+              max={100}
               step={1}
-              value={surfaceIndex}
-              aria-valuetext={surface.label}
-              onChange={(event) => setSurfaceIndex(event.currentTarget.valueAsNumber)}
+              value={surfacePercent}
+              aria-label="Fundo da lousa"
+              aria-valuetext={`${surfacePercent}%`}
+              onChange={(event) => setSurfacePercent(event.currentTarget.valueAsNumber)}
             />
-            <span aria-hidden="true">{surface.label}</span>
+            <span aria-hidden="true">{surfacePercent}%</span>
           </label>
         </div>
       </header>
@@ -303,7 +313,7 @@ export function Editor({ storage, server, deleting, navigation }: {
           drawingStyle={drawingStyle}
           strokeWidth={strokeWidth}
           scale={zoom / 100}
-          surface={surface.id}
+          surface={surface}
           onErase={eraseAt}
           selectedIds={selectedIds}
           onSelect={setSelectedIds}

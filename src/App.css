@@ -40,8 +40,36 @@ body { margin: 0; }
 }
 
 .board-surface input {
-  width: 92px;
-  accent-color: #583ce0;
+  appearance: none;
+  width: 112px;
+  height: 8px;
+  border: 1px solid #aeb7cc;
+  border-radius: 999px;
+  background: linear-gradient(to right, #fff, #fffdf3, #121212);
+  cursor: pointer;
+}
+
+.board-surface input::-webkit-slider-thumb {
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  border: 2px solid #583ce0;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.board-surface input::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: 2px solid #583ce0;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.board-surface span {
+  min-width: 4ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 h1 {
@@ -244,10 +272,7 @@ button:focus-visible {
 }
 
 .board-stage { position: absolute; inset: 0; }
-.quadro[data-surface="white"] { background-color: #fff; }
-
 .quadro[data-surface="dark"] {
-  background-color: #121212;
   background-image: radial-gradient(circle, #414141 1px, transparent 1px);
 }
 

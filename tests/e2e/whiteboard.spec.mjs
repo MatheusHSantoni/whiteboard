@@ -570,15 +570,18 @@ test("alterna os fundos e exibe textos antigos e novos em branco no fundo preto"
   const board = page.getByRole("region", { name: "Área de desenho" });
   const canvas = page.locator("canvas").first();
   const editor = page.getByRole("textbox", { name: "Texto do elemento" });
-  await expect(surface).toHaveAttribute("aria-valuetext", "Amarelado");
+  await expect(surface).toHaveAttribute("aria-valuetext", "50%");
   await page.keyboard.press("Alt+t");
   await page.getByLabel("Cor da ferramenta").fill("#d71920");
   await canvas.click({ position: { x: 50, y: 90 } });
   await editor.fill("Primeiro texto");
   await editor.press("Enter");
 
+  await surface.press("ArrowRight");
+  await expect(surface).toHaveAttribute("aria-valuetext", "51%");
+  await expect(board).toHaveCSS("background-color", "rgb(250, 248, 239)");
   await surface.press("End");
-  await expect(surface).toHaveAttribute("aria-valuetext", "Preto");
+  await expect(surface).toHaveAttribute("aria-valuetext", "100%");
   await expect(board).toHaveCSS("background-color", "rgb(18, 18, 18)");
   await canvas.click({ position: { x: 50, y: 140 } });
   await editor.fill("Segundo texto");
@@ -595,7 +598,7 @@ test("alterna os fundos e exibe textos antigos e novos em branco no fundo preto"
   await expect.poll(() => hasColor(90, 255, 255, 255)).toBe(true);
   await expect.poll(() => hasColor(140, 255, 255, 255)).toBe(true);
   await surface.press("Home");
-  await expect(surface).toHaveAttribute("aria-valuetext", "Branco");
+  await expect(surface).toHaveAttribute("aria-valuetext", "0%");
   await expect(board).toHaveCSS("background-color", "rgb(255, 255, 255)");
   await expect.poll(() => hasColor(90, 215, 25, 32)).toBe(true);
   await expect.poll(() => hasColor(140, 215, 25, 32)).toBe(true);

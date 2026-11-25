@@ -137,6 +137,18 @@ export default function Toolbar({
             <dd><kbd>Enter</kbd></dd>
           </div>
           <div>
+            <dt>Lista numerada</dt>
+            <dd><kbd>Ctrl + Shift + 7</kbd></dd>
+          </div>
+          <div>
+            <dt>Lista com marcadores</dt>
+            <dd><kbd>Ctrl + Shift + 8</kbd></dd>
+          </div>
+          <div>
+            <dt>Lista de verificação</dt>
+            <dd><kbd>Ctrl + Shift + 9</kbd></dd>
+          </div>
+          <div>
             <dt>Quebrar linha no texto</dt>
             <dd><kbd>Shift + Enter</kbd></dd>
           </div>

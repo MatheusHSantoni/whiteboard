@@ -34,7 +34,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   const shortcutList = page.locator("dl.shortcut-list");
   await expect(shortcutList).toBeVisible();
   await expect(shortcutList.locator("kbd")).toHaveText([
-    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + P", "Alt + M", "Alt + B", "Alt + T", "Ctrl + arrastar", "Shift + clique", "+ / −", "Ctrl + Z", "Ctrl + Y", "Delete", "Enter", "Shift + Enter", "Esc",
+    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + P", "Alt + M", "Alt + B", "Alt + T", "Ctrl + arrastar", "Shift + clique", "+ / −", "Ctrl + Z", "Ctrl + Y", "Delete", "Enter", "Ctrl + Shift + 7", "Ctrl + Shift + 8", "Ctrl + Shift + 9", "Shift + Enter", "Esc",
   ]);
   await page.keyboard.press("Enter");
   await expect(shortcutList).toBeHidden();
@@ -447,4 +447,24 @@ test("preserva o backup local e recarrega a revisão do servidor após um confli
   await drag(page, canvas, { x: 40, y: 50 }, { x: 90, y: 90 });
   await expect(page.getByRole("status")).toHaveText("Salvo no servidor");
   expect(revisions).toEqual([1, 2]);
+});
+
+test("aplica os três atalhos de lista e salva a formatação", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  await page.keyboard.press("Alt+t");
+  await page.locator("canvas").first().click({ position: { x: 60, y: 100 } });
+  const editor = page.getByRole("textbox", { name: "Texto do elemento" });
+  await editor.fill("Primeiro\nSegundo");
+  await editor.press("Control+a");
+  await editor.press("Control+Shift+8");
+  await expect(editor).toHaveValue("• Primeiro\n• Segundo");
+  await editor.press("Control+Shift+7");
+  await expect(editor).toHaveValue("1. Primeiro\n2. Segundo");
+  await editor.press("Control+Shift+9");
+  await expect(editor).toHaveValue("☐ Primeiro\n☐ Segundo");
+  await editor.press("Enter");
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "text", text: "☐ Primeiro\n☐ Segundo" }),
+  ]);
 });

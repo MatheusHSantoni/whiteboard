@@ -1,5 +1,7 @@
-import { useRef, useState, type CSSProperties } from "react";
+import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { DEFAULT_DRAWING_COLOR, MAX_TEXT_LENGTH, type TextMark } from "../../types/shapes";
+
+import { formatList } from "./textLists";
 
 const highlights = [
   { name: "Amarelo", color: "#fff176" },
@@ -39,6 +41,14 @@ export default function InlineTextEditor({ initialText, initialMarks, style, onC
   const [marks, setMarks] = useState(initialMarks);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const editor = useRef<HTMLTextAreaElement>(null);
+  const pendingSelection = useRef<{ start: number; end: number } | null>(null);
+  useLayoutEffect(() => {
+    const range = pendingSelection.current;
+    if (!range) return;
+    pendingSelection.current = null;
+    editor.current?.setSelectionRange(range.start, range.end);
+  }, [text]);
+
   const styles = new Map(marks.map((mark) => [mark.index, mark]));
 
   function format(property: "color" | "highlight", value?: string) {
@@ -95,6 +105,18 @@ export default function InlineTextEditor({ initialText, initialMarks, style, onC
         }}
         onKeyDown={(event) => {
           if (event.nativeEvent.isComposing) return;
+          if (event.ctrlKey && event.shiftKey && !event.altKey && /^Digit[789]$/.test(event.code)) {
+            event.preventDefault();
+            const { selectionStart, selectionEnd } = event.currentTarget;
+            const result = formatList(event.code, text, marks, selectionStart, selectionEnd);
+            if (result) {
+              pendingSelection.current = { start: result.start, end: result.end };
+              setSelection(pendingSelection.current);
+              setMarks(result.marks);
+              setText(result.text);
+            }
+            return;
+          }
           if (event.key === "Escape") {
             event.preventDefault();
             onCancel();

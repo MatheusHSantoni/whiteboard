@@ -136,6 +136,7 @@ export default function BoardShape({
           width={shape.width ?? DEFAULT_TEXT_WIDTH}
           padding={4}
           fontSize={shape.fontSize ?? DEFAULT_FONT_SIZE}
+          fontStyle={shape.bold ? "bold" : "normal"}
           fontFamily={FONTS[shape.font ?? "system"].stack}
           fill={stroke}
           textDecoration={selected ? "underline" : undefined}

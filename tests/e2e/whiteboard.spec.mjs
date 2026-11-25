@@ -127,11 +127,16 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   await expect(font.locator("option[value=verdana]")).toHaveText("Verdana");
   await font.selectOption("handwriting");
   await page.getByLabel("Tamanho").selectOption("32");
+  const bold = page.getByRole("button", { name: "Negrito" });
+  await bold.click();
+  await expect(bold).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".compact-style").filter({ has: font })).toContainText("Manuscrita");
+  await expect(page.locator(".compact-style").filter({ has: page.getByLabel("Tamanho") })).toContainText("32 px");
   await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
     expect.objectContaining({ type: "rectangle", x: 95, y: 80, width: 60, height: 55, color: "#214bd5", fillColor: "#ffec9a" }),
     expect.objectContaining({ type: "arrow" }),
-    expect.objectContaining({ type: "text", text: "Texto atualizado", x: 75, y: 180, width: 420, font: "handwriting", fontSize: 32,
+    expect.objectContaining({ type: "text", text: "Texto atualizado", x: 75, y: 180, width: 420, font: "handwriting", fontSize: 32, bold: true,
       marks: Array.from({ length: 5 }, (_, index) => ({ index, color: "#d71920", highlight: "#fff176" })), }),
   ]);
 

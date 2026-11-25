@@ -29,6 +29,7 @@ export type ElementStyle = {
   noFill?: boolean;
   font?: keyof typeof FONTS;
   fontSize?: number;
+  bold?: boolean;
 };
 
 export type TextMark = { index: number; color?: string; highlight?: string };
@@ -105,6 +106,7 @@ export function isShape(value: unknown): value is Shape {
       (typeof shape.fillColor !== "string" || !/^#[\da-f]{6}$/i.test(shape.fillColor))) return false;
   if (shape.font !== undefined &&
       (typeof shape.font !== "string" || !Object.hasOwn(FONTS, shape.font))) return false;
+  if (shape.bold !== undefined && typeof shape.bold !== "boolean") return false;
   if (shape.fontSize !== undefined &&
       (typeof shape.fontSize !== "number" || !FONT_SIZES.includes(shape.fontSize))) return false;
 

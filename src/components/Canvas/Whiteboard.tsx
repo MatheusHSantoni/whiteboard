@@ -311,9 +311,9 @@ export default function Whiteboard({
           const shape = shapes.find((item) => item.id === id);
           if (shape?.type !== "text") return;
 
-          const { id: textId, x, y, color, font, fontSize, width } = shape;
+          const { id: textId, x, y, color, font, fontSize, bold, width } = shape;
           onSelect([textId]);
-          setTextPosition({ id: textId, x, y, color, font, fontSize, width, text: shape.text, marks: shape.marks });
+          setTextPosition({ id: textId, x, y, color, font, fontSize, bold, width, text: shape.text, marks: shape.marks });
         }}
         onPointerDown={startGesture}
         onPointerMove={updateGesture}
@@ -355,6 +355,7 @@ export default function Whiteboard({
             color: textPosition.color,
             fontFamily: FONTS[textPosition.font ?? "system"].stack,
             fontSize: textPosition.fontSize ?? DEFAULT_FONT_SIZE,
+            fontWeight: textPosition.bold ? "bold" : "normal",
             width: textPosition.width ?? DEFAULT_TEXT_WIDTH,
           }}
           onCommit={(text, marks) => {

@@ -246,8 +246,9 @@ export default function Toolbar({
         </div>
       </details>
       <label className="tool-color compact-style">
-        Fonte
+        {FONTS[style?.font ?? "system"].label}
         <select
+          aria-label="Fonte"
           value={style?.font ?? "system"}
           disabled={disabled || styleType !== "text"}
           onChange={(event) => {
@@ -260,9 +261,18 @@ export default function Toolbar({
           ))}
         </select>
       </label>
+      <button
+        type="button"
+        aria-label="Negrito"
+        aria-pressed={style?.bold === true}
+        title="Negrito"
+        disabled={disabled || styleType !== "text"}
+        onClick={() => onStyleChange({ bold: !style?.bold })}
+      ><strong aria-hidden="true">B</strong></button>
       <label className="tool-color compact-style">
-        Tamanho
+        {style?.fontSize ?? DEFAULT_FONT_SIZE} px
         <select
+          aria-label="Tamanho"
           value={style?.fontSize ?? DEFAULT_FONT_SIZE}
           disabled={disabled || styleType !== "text"}
           onChange={(event) => onStyleChange({ fontSize: Number(event.target.value) })}

@@ -23,6 +23,7 @@ type ToolbarProps = {
   onToolChange: (tool: Tool) => void;
   disabled: boolean;
   style?: ElementStyle;
+  mixedColors?: boolean;
   styleType: Tool | Shape["type"];
   onImportImage: (file: File) => void;
   importing: boolean;
@@ -34,7 +35,7 @@ type ToolbarProps = {
 };
 
 export default function Toolbar({
-  activeTool, onToolChange, disabled, style, styleType, onStyleChange, onStrokeWidthChange, onDelete, onUndo, onRedo, onImportImage, importing,
+  activeTool, onToolChange, disabled, style, mixedColors, styleType, onStyleChange, onStrokeWidthChange, onDelete, onUndo, onRedo, onImportImage, importing,
 }: ToolbarProps) {
   const shortcutMenu = useRef<HTMLDetailsElement>(null);
 
@@ -237,6 +238,13 @@ export default function Toolbar({
           onChange={(event) => onStyleChange({ color: event.target.value })}
         />
       </label>
+      {mixedColors && (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => onStyleChange({ color: style?.color ?? DEFAULT_DRAWING_COLOR })}
+        >Aplicar cor à seleção</button>
+      )}
       <details className="shortcuts fill-menu" key={hasFill && !disabled ? "fill" : "fill-disabled"}>
         <summary
           aria-disabled={disabled || !hasFill}

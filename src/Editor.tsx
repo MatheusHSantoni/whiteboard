@@ -6,7 +6,7 @@ import Toolbar from "./components/Toolbar/Toolbar";
 import { readBoardImage } from "./utils/boardImage";
 import { eraseStroke } from "./utils/eraseStroke";
 import { useWhiteboard } from "./hooks/useWhiteboard";
-import { isShapeList, MAX_STROKE_WIDTH, resizeShape, type FreehandTool, type ElementStyle, type Point, type Shape, type TextMark, type Tool } from "./types/shapes";
+import { DEFAULT_DRAWING_COLOR, isShapeList, MAX_STROKE_WIDTH, resizeShape, type FreehandTool, type ElementStyle, type Point, type Shape, type TextMark, type Tool } from "./types/shapes";
 
 const BOARD_CLIPBOARD_TYPE = "application/x-whiteboard-shapes+json";
 const PASTE_OFFSET = 20;
@@ -74,6 +74,13 @@ export function Editor({ storage, server, deleting, navigation }: {
   const selectedIds = selection.filter((id) => board.shapes.some((shape) => shape.id === id));
   const selected = tool === "select" && selectedIds.length === 1
     ? board.shapes.find(({ id }) => id === selectedIds[0]) : undefined;
+  const groupStyle = tool === "select" && selectedIds.length > 1
+    ? board.shapes.find((shape) => shape.type !== "image" && selectedIds.includes(shape.id))
+    : undefined;
+  const mixedColors = groupStyle && board.shapes.some((shape) =>
+    shape.type !== "image" && selectedIds.includes(shape.id) &&
+    (shape.color ?? DEFAULT_DRAWING_COLOR) !== (groupStyle.color ?? DEFAULT_DRAWING_COLOR),
+  );
   const drawingStyle = tool === "select" || tool === "erase" ? undefined : styles[tool];
 
   const freehand = tool === "pencil" || tool === "marker" ? tool : undefined;
@@ -92,6 +99,14 @@ export function Editor({ storage, server, deleting, navigation }: {
       setStyles((previous) => ({ ...previous, [tool]: { ...previous[tool], ...patch } }));
     } else if (selected) {
       updateShape(selected.id, (shape) => ({ ...shape, ...patch }));
+    } else if (groupStyle && patch.color !== undefined) {
+      const { color } = patch;
+      const ids = new Set(selectedIds);
+      board.setShapes((shapes) => shapes.map((shape) =>
+        shape.type !== "image" && ids.has(shape.id) && shape.color !== color
+          ? { ...shape, color }
+          : shape,
+      ));
     }
   }
   const disabled = board.loading || board.loadFailed || deleting;
@@ -265,7 +280,8 @@ export function Editor({ storage, server, deleting, navigation }: {
         activeTool={tool}
         onToolChange={setTool}
         disabled={disabled}
-        style={selected?.type === "image" ? undefined : selected ?? drawingStyle}
+        style={selected?.type === "image" ? undefined : selected ?? groupStyle ?? drawingStyle}
+        mixedColors={Boolean(mixedColors)}
         styleType={selected?.type ?? tool}
         onImportImage={(file) => void importImage(file)}
         importing={importing}

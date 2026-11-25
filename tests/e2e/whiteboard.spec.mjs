@@ -318,6 +318,16 @@ test("seleciona formas sem preenchimento pelo interior e setas perto do traço",
     expect.objectContaining({ type: "circle", x: 160, y: 95, noFill: true }),
     expect.objectContaining({ type: "arrow", x: 220, y: 95 }),
   ]);
+
+  await drag(page, canvas, { x: 20, y: 30 }, { x: 325, y: 140 });
+  const color = page.getByLabel("Cor da ferramenta");
+  await expect(color).toBeEnabled();
+  await color.fill("#dc2638");
+  await expect.poll(async () => (await page.evaluate(savedShapes)).map(({ color }) => color))
+    .toEqual(["#dc2638", "#dc2638", "#dc2638"]);
+  await page.keyboard.press("Control+z");
+  await expect.poll(async () => (await page.evaluate(savedShapes)).every(({ color }) => color === undefined))
+    .toBe(true);
 });
 
 test("seleciona por arraste, alterna com Shift e move e apaga o conjunto", async ({ page }) => {

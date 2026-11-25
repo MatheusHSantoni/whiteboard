@@ -112,7 +112,8 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   await fillMenu.click();
 
   await canvas.click({ position: { x: 90, y: 190 } });
-  await drag(page, canvas, { x: 355, y: 194 }, { x: 495, y: 194 });
+  // Começa fora do contorno visível para verificar a área de clique ampliada.
+  await drag(page, canvas, { x: 369, y: 194 }, { x: 509, y: 194 });
   await canvas.dblclick({ position: { x: 90, y: 190 } });
   await expect(editor).toHaveCSS("width", "420px");
   await expect(editor).toHaveValue("Meu primeiro quadro");
@@ -293,6 +294,29 @@ test("permite repetir o salvamento automático após uma falha de armazenamento"
   await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
     expect.objectContaining({ type: "rectangle", width: 60, height: 55 }),
+  ]);
+});
+
+test("seleciona formas sem preenchimento pelo interior e setas perto do traço", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  const canvas = page.locator("canvas").first();
+
+  await page.keyboard.press("Alt+s");
+  await drag(page, canvas, { x: 40, y: 50 }, { x: 100, y: 100 });
+  await page.keyboard.press("Alt+c");
+  await drag(page, canvas, { x: 160, y: 75 }, { x: 185, y: 75 });
+  await page.keyboard.press("Alt+a");
+  await drag(page, canvas, { x: 220, y: 75 }, { x: 300, y: 75 });
+
+  await page.keyboard.press("Alt+v");
+  await drag(page, canvas, { x: 70, y: 75 }, { x: 70, y: 95 });
+  await drag(page, canvas, { x: 160, y: 75 }, { x: 160, y: 95 });
+  await drag(page, canvas, { x: 250, y: 86 }, { x: 250, y: 106 });
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "rectangle", x: 40, y: 70, noFill: true }),
+    expect.objectContaining({ type: "circle", x: 160, y: 95, noFill: true }),
+    expect.objectContaining({ type: "arrow", x: 220, y: 95 }),
   ]);
 });
 

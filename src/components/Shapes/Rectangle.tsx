@@ -6,16 +6,17 @@ type RectangleProps = {
   shape: Extract<Shape, { type: "square" | "rectangle" }>;
   stroke: string;
   selected?: boolean;
+  selectionMode?: boolean;
 };
 
-export default function Rectangle({ shape, stroke, selected }: RectangleProps) {
+export default function Rectangle({ shape, stroke, selected, selectionMode }: RectangleProps) {
   return (
     <Rect
       width={shape.type === "square" ? shape.size : shape.width}
       height={shape.type === "square" ? shape.size : shape.height}
       cornerRadius={4}
-      fill={shape.fillColor ?? DEFAULT_FILL}
-      fillEnabled={!shape.noFill}
+      fill={shape.noFill ? "transparent" : shape.fillColor ?? DEFAULT_FILL}
+      fillEnabled={!shape.noFill || selectionMode}
       stroke={stroke}
       strokeWidth={2}
       dash={selected ? [6, 4] : undefined}

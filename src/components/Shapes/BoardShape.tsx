@@ -12,6 +12,7 @@ import { textCharacterStyle } from "./textCharacterStyle";
 type BoardShapeProps = {
   shape: Shape;
   selected?: boolean;
+  selectionMode?: boolean;
   showHandles?: boolean;
   dark?: boolean;
   preview?: boolean;
@@ -21,7 +22,7 @@ type BoardShapeProps = {
 };
 
 export default function BoardShape({
-  shape: savedShape, selected, showHandles, dark, preview, onImageResize, onResize, onArrowBend,
+  shape: savedShape, selected, selectionMode, showHandles, dark, preview, onImageResize, onResize, onArrowBend,
 }: BoardShapeProps) {
   const [dragSize, setDragSize] = useState<Point>();
   const shape = dragSize ? resizeShape(savedShape, dragSize) : savedShape;
@@ -48,13 +49,13 @@ export default function BoardShape({
       listening={!preview}
     >
       {(shape.type === "square" || shape.type === "rectangle") && (
-        <Rectangle shape={shape} stroke={stroke} selected={selected} />
+        <Rectangle shape={shape} stroke={stroke} selected={selected} selectionMode={selectionMode} />
       )}
       {shape.type === "circle" && (
         <Circle
           radius={shape.radius}
-          fill={shape.fillColor ?? DEFAULT_FILL}
-          fillEnabled={!shape.noFill}
+          fill={shape.noFill ? "transparent" : shape.fillColor ?? DEFAULT_FILL}
+          fillEnabled={!shape.noFill || selectionMode}
           stroke={stroke}
           strokeWidth={2}
           dash={selected ? [6, 4] : undefined}
@@ -73,7 +74,7 @@ export default function BoardShape({
           fill={stroke}
           strokeWidth={3}
           dash={selected ? [6, 4] : undefined}
-          hitStrokeWidth={16}
+          hitStrokeWidth={selectionMode ? 28 : 16}
           lineCap="round"
           lineJoin="round"
         />
@@ -97,7 +98,8 @@ export default function BoardShape({
       {showHandles && resizePoint && (
         <Circle
           {...resizePoint}
-          radius={6}
+          radius={shape.type === "text" ? 10 : 6}
+          hitStrokeWidth={shape.type === "text" ? 16 : "auto"}
           fill="#583ce0"
           stroke="#fff"
           strokeWidth={2}

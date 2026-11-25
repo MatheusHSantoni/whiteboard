@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import pencilIcon from "../../assets/pencil.svg";
 import markerIcon from "../../assets/marker.svg";
 import {
@@ -36,6 +36,20 @@ type ToolbarProps = {
 export default function Toolbar({
   activeTool, onToolChange, disabled, style, styleType, onStyleChange, onStrokeWidthChange, onDelete, onUndo, onRedo, onImportImage, importing,
 }: ToolbarProps) {
+  const shortcutMenu = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => {
+    function closeShortcuts(event: PointerEvent) {
+      const menu = shortcutMenu.current;
+      if (menu?.open && event.target instanceof Node && !menu.contains(event.target)) {
+        menu.open = false;
+      }
+    }
+
+    window.addEventListener("pointerdown", closeShortcuts, true);
+    return () => window.removeEventListener("pointerdown", closeShortcuts, true);
+  }, []);
+
   const hasFill = styleType === "square" || styleType === "rectangle" || styleType === "circle";
 
   useEffect(() => {
@@ -82,7 +96,7 @@ export default function Toolbar({
 
   return (
     <nav className="toolbar" aria-label="Ferramentas do quadro">
-      <details className="shortcuts">
+      <details className="shortcuts" ref={shortcutMenu}>
         <summary>Atalhos</summary>
         <dl className="shortcut-list">
           {tools.map(({ id, label, icon, key }) => (
@@ -109,7 +123,7 @@ export default function Toolbar({
               <dd><kbd>Alt + {key}</kbd></dd>
             </div>
           ))}
-          <div>
+          <div className="shortcut-divider">
             <dt>Mover o Board</dt>
             <dd><kbd>Ctrl + arrastar</kbd></dd>
           </div>

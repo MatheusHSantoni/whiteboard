@@ -38,6 +38,10 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   ]);
   await page.keyboard.press("Enter");
   await expect(shortcutList).toBeHidden();
+  await shortcuts.click();
+  await expect(shortcutList).toBeVisible();
+  await canvas.click({ position: { x: 500, y: 30 } });
+  await expect(shortcutList).toBeHidden();
 
   await page.getByRole("button", { name: "Diminuir zoom" }).click();
   const zoom = page.getByRole("group", { name: "Zoom do quadro" });

@@ -186,6 +186,12 @@ button:focus-visible {
   gap: 16px;
 }
 
+.shortcut-divider {
+  border-top: 1px solid #aeb7cc;
+  margin-top: 4px;
+  padding-top: 8px;
+}
+
 .shortcut-list dd { margin: 0; }
 .shortcut-list kbd { white-space: nowrap; }
 

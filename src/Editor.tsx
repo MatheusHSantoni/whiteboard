@@ -4,6 +4,7 @@ import { downloadBackup, type BoardStorage } from "./utils/boardLibrary";
 import Whiteboard from "./components/Canvas/Whiteboard";
 import Toolbar from "./components/Toolbar/Toolbar";
 import { readBoardImage } from "./utils/boardImage";
+import { eraseStroke } from "./utils/eraseStroke";
 import { useWhiteboard } from "./hooks/useWhiteboard";
 import { isShapeList, MAX_STROKE_WIDTH, resizeShape, type FreehandTool, type ElementStyle, type Point, type Shape, type TextMark, type Tool } from "./types/shapes";
 
@@ -18,7 +19,7 @@ const instructions: Record<Tool, string> = {
   select: "Clique em um elemento ou arraste numa área vazia para selecionar vários.",
   pencil: "Arraste para desenhar livremente.",
   marker: "Arraste para destacar uma área da lousa.",
-  erase: "Clique ou arraste a borracha sobre os elementos para apagar.",
+  erase: "Arraste para apagar partes dos traços. Use Delete para apagar um traço selecionado.",
   rectangle: "Clique e arraste para desenhar um retângulo.",
   circle: "Clique no centro e arraste para definir o raio do círculo.",
   arrow: "Clique e arraste do início até a ponta da seta.",
@@ -181,6 +182,16 @@ export function Editor({ storage, server, deleting, navigation }: {
     setSelectedIds((current) => current.filter((id) => !removed.has(id)));
   }
 
+  function eraseAt(ids: string[], from: Point, to: Point, radius: number, historyGroup: symbol) {
+    const removed = new Set(ids);
+    const token = crypto.randomUUID();
+    board.setShapes((shapes) => {
+      let index = 0;
+      return shapes.flatMap((shape) => removed.has(shape.id) ? [] :
+        eraseStroke(shape, from, to, radius, () => `${token}-${index++}`));
+    }, historyGroup);
+  }
+
   function addShape(shape: Shape) {
     board.setShapes((shapes) => [...shapes, shape]);
   }
@@ -233,7 +244,7 @@ export function Editor({ storage, server, deleting, navigation }: {
       {!disabled && (
         <p className="instructions">
           {tool === "select" && selectedIds.length > 1
-            ? `${selectedIds.length} elementos selecionados. Arraste para mover ou pressione Delete.`
+            ? `${selectedIds.length} elementos selecionados. Arraste para mover ou use Ctrl + C para copiar.`
             : selected?.type === "text" ? "Dê dois cliques para editar ou arraste a alça roxa para mudar a largura do texto." :
             selected?.type === "arrow" ? "Arraste a ponta roxa para redimensionar a seta ou o ponto branco para ajustar a curva." :
             selected?.type === "image" ? "Arraste a alça no canto da imagem para redimensionar." :
@@ -267,7 +278,7 @@ export function Editor({ storage, server, deleting, navigation }: {
           drawingStyle={drawingStyle}
           strokeWidth={strokeWidth}
           scale={zoom / 100}
-          onErase={eraseShapes}
+          onErase={eraseAt}
           selectedIds={selectedIds}
           onSelect={setSelectedIds}
           shapes={board.shapes}

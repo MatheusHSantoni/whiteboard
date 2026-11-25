@@ -54,7 +54,7 @@ type WhiteboardProps = {
   drawingStyle?: ElementStyle;
   strokeWidth?: number;
   scale: number;
-  onErase: (ids: string[], historyGroup: symbol) => void;
+  onErase: (ids: string[], from: Point, to: Point, radius: number, historyGroup: symbol) => void;
   selectedIds: string[];
   onSelect: (ids: string[]) => void;
   shapes: Shape[];
@@ -127,17 +127,18 @@ export default function Whiteboard({
         x: previous.x + dx * index / steps,
         y: previous.y + dy * index / steps,
       });
-      const id = node?.findAncestor(".board-shape")?.id();
+      const group = node?.findAncestor(".board-shape");
+      const id = group?.hasName("freehand-stroke") ? undefined : group?.id();
       if (id && !erased.has(id)) {
         erased.add(id);
         hits.push(id);
       }
     }
     active.previous = point;
-    if (hits.length) {
-      active.refreshHitCanvas = true;
-      onErase(hits, active.historyGroup);
-    }
+    // Uma edição pode deixar o canvas de interação desatualizado até a próxima pintura.
+    active.refreshHitCanvas = true;
+    const inverse = canvasLayer.getAbsoluteTransform().copy().invert();
+    onErase(hits, inverse.point(previous), inverse.point(point), 8 / scale, active.historyGroup);
   }
 
   function stopErase(pointerId: number) {

@@ -39,7 +39,7 @@ export default function BoardShape({
   return (
     <Group
       id={shape.id}
-      name="board-shape"
+      name={shape.type === "pencil" || shape.type === "marker" ? "board-shape freehand-stroke" : "board-shape"}
       x={shape.x}
       y={shape.y}
       opacity={preview ? 0.65 : 1}

@@ -361,12 +361,16 @@ test("desenha à mão livre com lápis e marca-texto e ajusta a espessura pelo t
   await page.mouse.move(bounds.x + 80, bounds.y + 40);
   await page.mouse.down();
   await page.mouse.move(bounds.x + 80, bounds.y + 160);
-  await expect.poll(() => page.evaluate(savedShapes)).toEqual([]);
+  await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(4);
+  await expect.poll(() => canvas.evaluate((node) => {
+    const context = node.getContext("2d");
+    return [60, 80, 100].map((x) => context.getImageData(x, 130, 1, 1).data[3] > 0);
+  })).toEqual([true, false, true]);
   await page.mouse.up();
   await page.keyboard.press("Control+z");
   await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(2);
   await page.keyboard.press("Control+y");
-  await expect.poll(() => page.evaluate(savedShapes)).toEqual([]);
+  await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(4);
   await page.keyboard.press("Control+z");
   await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(2);
   await page.keyboard.press("Alt+s");
@@ -497,4 +501,44 @@ test("copia e cola elementos selecionados com Ctrl C e Ctrl V", async ({ page })
   expect(new Set(shapes.map(({ id }) => id)).size).toBe(4);
   await page.keyboard.press("Control+z");
   await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(2);
+});
+
+test("cola um retângulo, texto e traço de lápis como elementos editáveis", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  const canvas = page.locator("canvas").first();
+  await page.keyboard.press("Alt+s");
+  await drag(page, canvas, { x: 40, y: 50 }, { x: 190, y: 120 });
+  await page.keyboard.press("Alt+t");
+  await canvas.click({ position: { x: 55, y: 65 } });
+  const editor = page.getByRole("textbox", { name: "Texto do elemento" });
+  await editor.fill("Texto original");
+  await editor.press("Enter");
+  await page.keyboard.press("Alt+p");
+  await drag(page, canvas, { x: 60, y: 105 }, { x: 125, y: 105 });
+
+  await page.keyboard.press("Alt+v");
+  await drag(page, canvas, { x: 20, y: 25 }, { x: 205, y: 135 });
+  await expect(page.getByText(/3 elementos selecionados/)).toBeVisible();
+  await page.keyboard.press("Control+c");
+  await page.keyboard.press("Control+v");
+  await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(6);
+
+  await drag(page, canvas, { x: 115, y: 125 }, { x: 415, y: 125 });
+  await canvas.dblclick({ position: { x: 395, y: 95 } });
+  await expect(editor).toHaveValue("Texto original");
+  await editor.fill("Cópia editada");
+  await editor.press("Enter");
+  await canvas.click({ position: { x: 360, y: 120 } });
+  await page.getByLabel("Cor da ferramenta").fill("#0055cc");
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "rectangle", x: 40, y: 50 }),
+    expect.objectContaining({ type: "text", x: 55, y: 65, text: "Texto original" }),
+    expect.objectContaining({ type: "pencil", x: 60, y: 105 }),
+    expect.objectContaining({ type: "rectangle", x: 360, y: 70, color: "#0055cc" }),
+    expect.objectContaining({ type: "text", x: 375, y: 85, text: "Cópia editada" }),
+    expect.objectContaining({ type: "pencil", x: 380, y: 125 }),
+  ]);
+  const shapes = await page.evaluate(savedShapes);
+  expect(shapes[5].points).toEqual(shapes[2].points);
 });

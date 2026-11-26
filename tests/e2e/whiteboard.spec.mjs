@@ -19,13 +19,18 @@ test("transfere a edição para a aba mais nova e mantém os formatos de exporta
 
   const newest = await context.newPage();
   await newest.goto("/");
-  await expect(page.getByRole("alert")).toContainText("A edição foi desativada");
-  await expect(newest.getByText("A edição deste Board passou para esta aba.")).toBeVisible();
+  const oldNotice = page.getByRole("dialog", { name: "Board aberto em duas abas" });
+  const newNotice = newest.getByRole("dialog", { name: "Board aberto em duas abas" });
+  await expect(oldNotice).toContainText("A edição foi desativada");
+  await expect(newNotice).toContainText("A edição deste Board passou para esta aba.");
+  await oldNotice.getByRole("button", { name: "OK" }).click();
+  await newNotice.getByRole("button", { name: "OK" }).click();
   await expect(page.getByRole("button", { name: "Borracha" })).toBeDisabled();
   await expect(newest.getByRole("button", { name: "Borracha" })).toBeEnabled();
 
   const pngDownload = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Exportar PNG" }).click();
+  await page.getByRole("button", { name: "Exportar", exact: true }).click();
+  await page.getByRole("button", { name: "Imagem (PNG)" }).click();
   const pngFile = await pngDownload;
   expect(pngFile.suggestedFilename()).toBe("board.png");
   const png = await readFile(await pngFile.path());
@@ -34,7 +39,8 @@ test("transfere a edição para a aba mais nova e mantém os formatos de exporta
   expect(png.readUInt32BE(20)).toBe(42);
 
   const backupDownload = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Exportar Board" }).click();
+  await page.getByRole("button", { name: "Exportar", exact: true }).click();
+  await page.getByRole("button", { name: "Board (JSON)" }).click();
   const backup = JSON.parse(await readFile(await (await backupDownload).path(), "utf8"));
   expect(backup.shapes).toHaveLength(1);
 });
@@ -225,7 +231,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
 test("desenha, salva e seleciona um círculo após recarregar", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("option", { name: "Board principal" })).toBeAttached();
-  await expect(page.getByRole("button", { name: "Exportar Board" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Exportar", exact: true })).toBeEnabled();
   const canvas = page.locator("canvas").first();
 
   await page.keyboard.press("Alt+c");
@@ -245,7 +251,7 @@ test("desenha, salva e seleciona um círculo após recarregar", async ({ page })
   ]);
 
   await page.reload();
-  await expect(page.getByRole("button", { name: "Exportar Board" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Exportar", exact: true })).toBeEnabled();
   await canvas.click({ position: { x: 100, y: 100 } });
   await fillMenu.click();
   await expect(fill).toHaveValue("#ffec9a");
@@ -259,7 +265,7 @@ test("desenha, salva e seleciona um círculo após recarregar", async ({ page })
     expect.objectContaining({ type: "circle", noFill: true, fillColor: "#ffec9a" }),
   ]);
   await page.reload();
-  await expect(page.getByRole("button", { name: "Exportar Board" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Exportar", exact: true })).toBeEnabled();
   await canvas.click({ position: { x: 150, y: 100 } });
   await fillMenu.click();
   await expect(noFill).toHaveAttribute("aria-pressed", "true");
@@ -523,7 +529,8 @@ test("preserva o backup local e recarrega a revisão do servidor após um confli
   await reload.click();
   await drag(page, canvas, { x: 100, y: 50 }, { x: 150, y: 90 });
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Exportar Board" }).click();
+  await page.getByRole("button", { name: "Exportar", exact: true }).click();
+  await page.getByRole("button", { name: "Board (JSON)" }).click();
   const { readFile } = await import("node:fs/promises");
   const backup = JSON.parse(await readFile(await (await download).path(), "utf8"));
   expect(backup.shapes).toHaveLength(2);

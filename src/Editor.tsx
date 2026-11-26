@@ -70,12 +70,17 @@ export function Editor({ boardId, storage, server, deleting, navigation }: {
   const [zoom, setZoom] = useState(100);
   const boardArea = useRef<HTMLDivElement>(null);
   const drawingLayer = useRef<Layer>(null);
+  const exportDialog = useRef<HTMLDialogElement>(null);
   const [exportingPng, setExportingPng] = useState(false);
   const [exportError, setExportError] = useState("");
   const [imageError, setImageError] = useState("");
   const [importing, setImporting] = useState(false);
   const { replaced, replacedAnother } = useBoardTab(`${server ? "server" : "local"}:${boardId}`);
   const board = useWhiteboard(storage, replaced);
+  const tabNotice = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (replaced || replacedAnother) tabNotice.current?.showModal();
+  }, [replaced, replacedAnother]);
   useEffect(() => {
     const area = boardArea.current;
     if (!area) return;
@@ -320,13 +325,31 @@ export function Editor({ boardId, storage, server, deleting, navigation }: {
 
       <div className="board-library">
         {navigation?.(board.dirty || importing || replaced)}
-        <button type="button" disabled={!canExport && !board.saveConflict} onClick={() => downloadBackup(board.shapes)}>
-          Exportar Board
+        <button type="button" disabled={!canExport && !board.saveConflict} onClick={() => exportDialog.current?.showModal()}>
+          Exportar
         </button>
-        <button type="button" disabled={!canExport} onClick={() => void exportPng()}>Exportar PNG</button>
       </div>
-      {replaced && <p className="message" role="alert">Este Board foi aberto em outra aba. A edição foi desativada nesta aba.</p>}
-      {!replaced && replacedAnother && <p className="message" role="status">A edição deste Board passou para esta aba.</p>}
+      <dialog ref={tabNotice} className="board-dialog" aria-labelledby="board-tab-title" aria-describedby="board-tab-message">
+        <h2 id="board-tab-title">Board aberto em duas abas</h2>
+        <p id="board-tab-message">{replaced
+          ? "Este Board foi aberto em outra aba. A edição foi desativada nesta aba."
+          : "A edição deste Board passou para esta aba."}</p>
+        <form method="dialog"><button>OK</button></form>
+      </dialog>
+      <dialog ref={exportDialog} className="board-dialog" aria-labelledby="board-export-title">
+        <h2 id="board-export-title">Exportar Board</h2>
+        <div className="board-dialog-actions">
+          <button type="button" onClick={() => {
+            exportDialog.current?.close();
+            downloadBackup(board.shapes);
+          }}>Board (JSON)</button>
+          <button type="button" disabled={!canExport} onClick={() => {
+            exportDialog.current?.close();
+            void exportPng();
+          }}>Imagem (PNG)</button>
+          <form method="dialog"><button>Cancelar</button></form>
+        </div>
+      </dialog>
       {exportError && <p className="message" role="alert">{exportError}</p>}
 
       <Toolbar

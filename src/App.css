@@ -380,3 +380,14 @@ button:focus-visible {
 .board-library form {
   padding: 8px;
 }
+
+.board-dialog {
+  max-width: min(26rem, calc(100vw - 2rem));
+  padding: 1.25rem;
+  border: 1px solid #d9dce6;
+  border-radius: 12px;
+}
+
+.board-dialog::backdrop { background: rgb(20 24 40 / 45%); }
+.board-dialog h2 { margin: 0 0 0.75rem; font-size: 1.1rem; }
+.board-dialog-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }

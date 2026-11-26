@@ -342,6 +342,7 @@ export default function Whiteboard({
                 y: shape.y + moving.current.y - moving.start.y,
               } : shape}
               selected={selected.has(shape.id)}
+              onChecklistChange={!disabled && (tool === "select" || tool === "text") ? onTextEdit : undefined}
               selectionMode={tool === "select"}
               dark={surface.dark}
               showHandles={selected.size === 1 && selected.has(shape.id)}

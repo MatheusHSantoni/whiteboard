@@ -524,6 +524,20 @@ test("aplica os três atalhos de lista e salva a formatação", async ({ page })
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
     expect.objectContaining({ type: "text", text: "☐ Primeiro\n☐ Segundo" }),
   ]);
+  const canvas = page.locator("canvas").first();
+  await canvas.click({ position: { x: 70, y: 132 } });
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "text", text: "☐ Primeiro\n☑ Segundo" }),
+  ]);
+  await page.reload();
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  await canvas.dblclick({ position: { x: 110, y: 132 } });
+  await expect(page.locator(".text-editor-preview span").first()).toHaveCSS("text-decoration-line", "line-through");
+  await editor.press("Escape");
+  await canvas.click({ position: { x: 70, y: 132 } });
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "text", text: "☐ Primeiro\n☐ Segundo" }),
+  ]);
 });
 
 test("copia e cola elementos selecionados com Ctrl C e Ctrl V", async ({ page }) => {

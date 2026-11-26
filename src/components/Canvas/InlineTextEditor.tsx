@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { DEFAULT_DRAWING_COLOR, MAX_TEXT_LENGTH, type TextMark } from "../../types/shapes";
 
 import { formatList } from "./textLists";
+import { completedChecklistRanges } from "../../utils/checklist";
 
 const highlights = [
   { name: "Amarelo", color: "#fff176" },
@@ -51,6 +52,7 @@ export default function InlineTextEditor({ initialText, initialMarks, dark, styl
   }, [text]);
 
   const styles = new Map(marks.map((mark) => [mark.index, mark]));
+  const completed = completedChecklistRanges(text);
 
   function format(property: "color" | "highlight", value?: string) {
     for (let index = selection.start; index < selection.end; index++) {
@@ -80,8 +82,13 @@ export default function InlineTextEditor({ initialText, initialMarks, dark, styl
       <div className="text-editor-preview" aria-hidden="true">
         {Array.from(text).reduce<{ index: number; nodes: React.ReactNode[] }>((result, char) => {
           const mark = styles.get(result.index);
-          result.nodes.push(mark
-            ? <span key={result.index} style={{ color: dark ? undefined : mark.color, backgroundColor: dark && mark.highlight ? `${mark.highlight}66` : mark.highlight }}>{char}</span>
+          const struck = completed.some(({ start, end }) => result.index >= start && result.index < end);
+          result.nodes.push(mark || struck
+            ? <span key={result.index} style={{
+              color: dark ? undefined : mark?.color,
+              backgroundColor: dark && mark?.highlight ? `${mark.highlight}66` : mark?.highlight,
+              textDecoration: struck ? "line-through" : undefined,
+            }}>{char}</span>
             : char);
           result.index += char.length;
           return result;

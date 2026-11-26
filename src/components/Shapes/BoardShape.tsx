@@ -2,12 +2,14 @@ import "konva/lib/shapes/Arrow.js";
 import "konva/lib/shapes/Text.js";
 import "konva/lib/shapes/Circle.js";
 import "konva/lib/shapes/Line.js";
+import type { Text as KonvaText } from "konva/lib/shapes/Text";
 import { useState } from "react";
 import { Arrow, Circle, Group, Line, Rect, Text } from "react-konva/lib/ReactKonvaCore.js";
 import { DEFAULT_DRAWING_COLOR, DEFAULT_FILL, DEFAULT_FONT_SIZE, DEFAULT_TEXT_WIDTH, FONTS, resizeShape, type Point, type Shape } from "../../types/shapes";
 import BoardImage from "./BoardImage";
 import Rectangle from "./Rectangle";
 import { textCharacterStyle } from "./textCharacterStyle";
+import { toggleChecklistItem } from "../../utils/checklist";
 
 type BoardShapeProps = {
   shape: Shape;
@@ -19,10 +21,11 @@ type BoardShapeProps = {
   onImageResize?: (id: string, width: number, height: number) => void;
   onResize?: (id: string, point: Point) => void;
   onArrowBend?: (id: string, bend: Point) => void;
+  onChecklistChange?: (id: string, text: string, marks: NonNullable<Extract<Shape, { type: "text" }>["marks"]>) => void;
 };
 
 export default function BoardShape({
-  shape: savedShape, selected, selectionMode, showHandles, dark, preview, onImageResize, onResize, onArrowBend,
+  shape: savedShape, selected, selectionMode, showHandles, dark, preview, onImageResize, onResize, onArrowBend, onChecklistChange,
 }: BoardShapeProps) {
   const [dragSize, setDragSize] = useState<Point>();
   const shape = dragSize ? resizeShape(savedShape, dragSize) : savedShape;
@@ -137,7 +140,24 @@ export default function BoardShape({
       {shape.type === "text" && (
         <Text
           text={shape.text}
-          charRenderFunc={shape.marks?.length ? textCharacterStyle(shape, dark) : undefined}
+          charRenderFunc={shape.marks?.length || /^☑ /m.test(shape.text) ? textCharacterStyle(shape, dark) : undefined}
+          onPointerDown={(event) => {
+            if (!onChecklistChange || event.evt.button !== 0 ||
+                event.evt.ctrlKey || event.evt.shiftKey || event.evt.metaKey) return;
+            const node = event.currentTarget as KonvaText;
+            const point = node.getRelativePointerPosition();
+            if (!point || point.x < 0 || point.x > node.padding() * 2 + node.measureSize("☑").width) return;
+            const row = Math.floor((point.y - node.padding()) / (node.lineHeight() * node.fontSize()));
+            if (row < 0 || row >= node.textArr.length) return;
+            // Uma tarefa pode ocupar várias linhas visuais, mas só a primeira tem caixa.
+            const precedingRows = node.textArr.slice(0, row);
+            if (row > 0 && !precedingRows.at(-1)?.lastInParagraph) return;
+            const line = precedingRows.filter(({ lastInParagraph }) => lastInParagraph).length;
+            const text = toggleChecklistItem(shape.text, line);
+            if (text === shape.text) return;
+            event.cancelBubble = true;
+            onChecklistChange(shape.id, text, shape.marks ?? []);
+          }}
           width={shape.width ?? DEFAULT_TEXT_WIDTH}
           padding={4}
           fontSize={shape.fontSize ?? DEFAULT_FONT_SIZE}

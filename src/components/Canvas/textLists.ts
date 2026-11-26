@@ -6,6 +6,29 @@ const listKinds = {
   Digit9: { pattern: /^[☐☑] /, prefix: () => "☐ " },
 };
 
+export function continueList(text: string, marks: TextMark[], start: number, end: number) {
+  const first = start === 0 ? 0 : text.lastIndexOf("\n", start - 1) + 1;
+  const prefix = text.slice(first, start).match(/^(?:(\d+)\.|([•☐☑])) /);
+  if (!prefix) return null;
+
+  const marker = prefix[1] ? `${BigInt(prefix[1]) + 1n}.` : prefix[2] === "•" ? "•" : "☐";
+  const insertion = `\n${marker} `;
+  const next = text.slice(0, start) + insertion + text.slice(end);
+  if (next.length > MAX_TEXT_LENGTH) return null;
+
+  const caret = start + insertion.length;
+  return {
+    text: next,
+    marks: marks.flatMap((mark) => {
+      if (mark.index < start) return [mark];
+      if (mark.index < end) return [];
+      return [{ ...mark, index: mark.index + caret - end }];
+    }),
+    start: caret,
+    end: caret,
+  };
+}
+
 export function formatList(
   code: string, text: string, marks: TextMark[], start: number, end: number,
 ) {

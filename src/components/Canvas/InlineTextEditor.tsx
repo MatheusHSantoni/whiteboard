@@ -1,7 +1,7 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { DEFAULT_DRAWING_COLOR, MAX_TEXT_LENGTH, type TextMark } from "../../types/shapes";
 
-import { formatList } from "./textLists";
+import { continueList, formatList } from "./textLists";
 import { completedChecklistRanges } from "../../utils/checklist";
 
 const highlights = [
@@ -53,6 +53,14 @@ export default function InlineTextEditor({ initialText, initialMarks, dark, styl
 
   const styles = new Map(marks.map((mark) => [mark.index, mark]));
   const completed = completedChecklistRanges(text);
+
+  function applyListEdit(result: NonNullable<ReturnType<typeof formatList>>) {
+    const range = { start: result.start, end: result.end };
+    pendingSelection.current = range;
+    setSelection(range);
+    setMarks(result.marks);
+    setText(result.text);
+  }
 
   function format(property: "color" | "highlight", value?: string) {
     for (let index = selection.start; index < selection.end; index++) {
@@ -117,11 +125,15 @@ export default function InlineTextEditor({ initialText, initialMarks, dark, styl
             event.preventDefault();
             const { selectionStart, selectionEnd } = event.currentTarget;
             const result = formatList(event.code, text, marks, selectionStart, selectionEnd);
+            if (result) applyListEdit(result);
+            return;
+          }
+          if (event.key === "Enter" && event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
+            const { selectionStart, selectionEnd } = event.currentTarget;
+            const result = continueList(text, marks, selectionStart, selectionEnd);
             if (result) {
-              pendingSelection.current = { start: result.start, end: result.end };
-              setSelection(pendingSelection.current);
-              setMarks(result.marks);
-              setText(result.text);
+              event.preventDefault();
+              applyListEdit(result);
             }
             return;
           }

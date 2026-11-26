@@ -544,6 +544,22 @@ test("preserva o backup local e recarrega a revisão do servidor após um confli
   expect(revisions).toEqual([1, 2]);
 });
 
+test("continua listas numeradas, de marcadores e de tarefas com Shift + Enter", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  await page.keyboard.press("Alt+t");
+  await page.locator("canvas").first().click({ position: { x: 60, y: 100 } });
+  const editor = page.getByRole("textbox", { name: "Texto do elemento" });
+  for (const [key, first, second] of [["7", "1.", "2."], ["8", "•", "•"], ["9", "☐", "☐"]]) {
+    await editor.fill("Primeiro");
+    await editor.press("End");
+    await editor.press(`Control+Shift+${key}`);
+    await editor.press("Shift+Enter");
+    await page.keyboard.type("Segundo");
+    await expect(editor).toHaveValue(`${first} Primeiro\n${second} Segundo`);
+  }
+});
+
 test("aplica os três atalhos de lista e salva a formatação", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");

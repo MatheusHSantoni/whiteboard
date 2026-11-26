@@ -106,7 +106,7 @@ export default function BoardLibrary({ server }: { server: boolean }) {
     );
   }
 
-  if (activeId) return <Editor key={activeId} storage={storage} server={server} deleting={deleting} navigation={navigation} />;
+  if (activeId) return <Editor key={activeId} boardId={activeId} storage={storage} server={server} deleting={deleting} navigation={navigation} />;
 
   return (
     <main className="app">

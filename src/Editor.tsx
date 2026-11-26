@@ -1,5 +1,9 @@
 import "./App.css";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
+import type { Layer } from "konva/lib/Layer";
+import { useBoardTab } from "./hooks/useBoardTab";
+import { downloadBoardPng } from "./utils/boardPng";
 import { downloadBackup, type BoardStorage } from "./utils/boardLibrary";
 import Whiteboard from "./components/Canvas/Whiteboard";
 import Toolbar from "./components/Toolbar/Toolbar";
@@ -47,7 +51,8 @@ const instructions: Record<Tool, string> = {
   text: "Clique no quadro e digite. Enter confirma e Esc cancela.",
 };
 
-export function Editor({ storage, server, deleting, navigation }: {
+export function Editor({ boardId, storage, server, deleting, navigation }: {
+  boardId: string;
   storage: BoardStorage;
   server: boolean;
   deleting: boolean;
@@ -64,9 +69,13 @@ export function Editor({ storage, server, deleting, navigation }: {
   const surface = getBoardSurface(surfacePercent);
   const [zoom, setZoom] = useState(100);
   const boardArea = useRef<HTMLDivElement>(null);
+  const drawingLayer = useRef<Layer>(null);
+  const [exportingPng, setExportingPng] = useState(false);
+  const [exportError, setExportError] = useState("");
   const [imageError, setImageError] = useState("");
   const [importing, setImporting] = useState(false);
-  const board = useWhiteboard(storage);
+  const { replaced, replacedAnother } = useBoardTab(`${server ? "server" : "local"}:${boardId}`);
+  const board = useWhiteboard(storage, replaced);
   useEffect(() => {
     const area = boardArea.current;
     if (!area) return;
@@ -134,7 +143,23 @@ export function Editor({ storage, server, deleting, navigation }: {
       ));
     }
   }
-  const disabled = board.loading || board.loadFailed || deleting;
+  const canExport = !board.loading && !board.loadFailed && !deleting;
+  const disabled = replaced || !canExport;
+
+  async function exportPng() {
+    const layer = drawingLayer.current;
+    if (!layer) return;
+    setExportError("");
+    // A captura usa os elementos sem alças nem decoração de seleção.
+    flushSync(() => setExportingPng(true));
+    const download = downloadBoardPng(layer, surface.color);
+    setExportingPng(false);
+    try {
+      await download;
+    } catch {
+      setExportError("Não foi possível exportar o Board em PNG.");
+    }
+  }
   const previousPaste = useRef<{ payload: string; offset: number } | null>(null);
 
   useEffect(() => {
@@ -294,11 +319,15 @@ export function Editor({ storage, server, deleting, navigation }: {
       </header>
 
       <div className="board-library">
-        {navigation?.(board.dirty || importing)}
-        <button type="button" disabled={disabled && !board.saveConflict} onClick={() => downloadBackup(board.shapes)}>
+        {navigation?.(board.dirty || importing || replaced)}
+        <button type="button" disabled={!canExport && !board.saveConflict} onClick={() => downloadBackup(board.shapes)}>
           Exportar Board
         </button>
+        <button type="button" disabled={!canExport} onClick={() => void exportPng()}>Exportar PNG</button>
       </div>
+      {replaced && <p className="message" role="alert">Este Board foi aberto em outra aba. A edição foi desativada nesta aba.</p>}
+      {!replaced && replacedAnother && <p className="message" role="status">A edição deste Board passou para esta aba.</p>}
+      {exportError && <p className="message" role="alert">{exportError}</p>}
 
       <Toolbar
         activeTool={tool}
@@ -336,7 +365,7 @@ export function Editor({ storage, server, deleting, navigation }: {
           <button type="button" onClick={board.retryLoad}>Tentar novamente</button>
         </div>
       )}
-      {board.saveFailed && !board.loading && !board.loadFailed && (
+      {!replaced && board.saveFailed && !board.loading && !board.loadFailed && (
         <div className="message">
           <p role="alert">{saveError}</p>
           {board.saveConflict ? (
@@ -347,15 +376,16 @@ export function Editor({ storage, server, deleting, navigation }: {
         </div>
       )}
 
-      <div className="board-area" ref={boardArea}>
+      <div className="board-area" ref={boardArea} inert={replaced}>
         <Whiteboard
+          layer={drawingLayer}
           tool={tool}
           drawingStyle={drawingStyle}
           strokeWidth={strokeWidth}
           scale={zoom / 100}
           surface={surface}
           onErase={eraseAt}
-          selectedIds={selectedIds}
+          selectedIds={exportingPng ? [] : selectedIds}
           onSelect={setSelectedIds}
           shapes={board.shapes}
           disabled={disabled}

@@ -3,7 +3,7 @@ import type { Shape } from "../types/shapes";
 import { BoardConflictError, type BoardStorage } from "../utils/boardLibrary";
 import { createHistory, recordEdit, redoEdit, undoEdit } from "../utils/boardHistory";
 
-export function useWhiteboard(storage: BoardStorage) {
+export function useWhiteboard(storage: BoardStorage, readOnly = false) {
   const [{ shapes, previous, next }, setHistory] = useState(() => createHistory());
   const [savedShapes, setSavedShapes] = useState<Shape[]>(shapes);
   const [loading, setLoading] = useState(true);
@@ -33,7 +33,7 @@ export function useWhiteboard(storage: BoardStorage) {
   }, [loadAttempt, storage]);
 
   useEffect(() => {
-    if (loading || loadFailed || saving || writeInProgress.current ||
+    if (readOnly || loading || loadFailed || saving || writeInProgress.current ||
         shapes === savedShapes || saveFailure?.conflict || shapes === saveFailure?.shapes) return;
 
     // Serializa as gravações para que cada uma use a revisão retornada pela anterior.
@@ -53,7 +53,7 @@ export function useWhiteboard(storage: BoardStorage) {
       writeInProgress.current = false;
       setSaving(false);
     });
-  }, [loading, loadFailed, saving, shapes, savedShapes, saveFailure, storage]);
+  }, [readOnly, loading, loadFailed, saving, shapes, savedShapes, saveFailure, storage]);
 
   function setShapes(update: SetStateAction<Shape[]>, group?: symbol) {
     setHistory((history) => {

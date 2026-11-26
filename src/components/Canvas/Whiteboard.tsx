@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import type { Layer as KonvaLayer } from "konva/lib/Layer";
 import type { KonvaEventObject } from "konva/lib/Node";
 import { Layer, Rect, Stage } from "react-konva/lib/ReactKonvaCore.js";
@@ -54,6 +54,7 @@ type PanGesture = {
 };
 
 type WhiteboardProps = {
+  layer: RefObject<KonvaLayer | null>;
   tool: Tool;
   drawingStyle?: ElementStyle;
   strokeWidth?: number;
@@ -82,9 +83,8 @@ function selectionBounds(start: Point, end: Point) {
 }
 
 export default function Whiteboard({
-  tool, drawingStyle, strokeWidth, scale, surface, onErase, selectedIds, onSelect, shapes, disabled, onAdd, onTextEdit, onMove, onImageResize, onResize, onArrowBend,
+  layer, tool, drawingStyle, strokeWidth, scale, surface, onErase, selectedIds, onSelect, shapes, disabled, onAdd, onTextEdit, onMove, onImageResize, onResize, onArrowBend,
 }: WhiteboardProps) {
-  const layer = useRef<KonvaLayer>(null);
   const container = useRef<HTMLDivElement>(null);
   const [offset, setOffset] = useState<Point>({ x: 0, y: 0 });
   const [panning, setPanning] = useState(false);

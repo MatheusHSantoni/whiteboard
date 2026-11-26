@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 async function drag(page, canvas, start, end) {
   const bounds = await canvas.boundingBox();
@@ -7,6 +8,36 @@ async function drag(page, canvas, start, end) {
   await page.mouse.move(bounds.x + end.x, bounds.y + end.y, { steps: 5 });
   await page.mouse.up();
 }
+
+test("transfere a edição para a aba mais nova e mantém os formatos de exportação", async ({ page, context }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  const canvas = page.locator("canvas").first();
+  await page.keyboard.press("Alt+s");
+  await drag(page, canvas, { x: 40, y: 50 }, { x: 100, y: 90 });
+  await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(1);
+
+  const newest = await context.newPage();
+  await newest.goto("/");
+  await expect(page.getByRole("alert")).toContainText("A edição foi desativada");
+  await expect(newest.getByText("A edição deste Board passou para esta aba.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Borracha" })).toBeDisabled();
+  await expect(newest.getByRole("button", { name: "Borracha" })).toBeEnabled();
+
+  const pngDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exportar PNG" }).click();
+  const pngFile = await pngDownload;
+  expect(pngFile.suggestedFilename()).toBe("board.png");
+  const png = await readFile(await pngFile.path());
+  expect(png.subarray(1, 4).toString()).toBe("PNG");
+  expect(png.readUInt32BE(16)).toBe(62);
+  expect(png.readUInt32BE(20)).toBe(42);
+
+  const backupDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Exportar Board" }).click();
+  const backup = JSON.parse(await readFile(await (await backupDownload).path(), "utf8"));
+  expect(backup.shapes).toHaveLength(1);
+});
 
 function savedShapes() {
   return new Promise((resolve, reject) => {

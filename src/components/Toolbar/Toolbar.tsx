@@ -28,7 +28,7 @@ type ToolbarProps = {
   onImportImage: (file: File) => void;
   importing: boolean;
   onStyleChange: (patch: ElementStyle) => void;
-  onStrokeWidthChange: (tool: FreehandTool, direction: number) => void;
+  onStrokeWidthChange: (tool: FreehandTool | "erase", direction: number) => void;
   onDelete?: () => void;
   onUndo?: () => void;
   onRedo?: () => void;
@@ -75,7 +75,7 @@ export default function Toolbar({
       }
       if (event.ctrlKey || event.metaKey || target?.closest("input, select")) return;
 
-      if ((activeTool === "pencil" || activeTool === "marker") && !event.altKey &&
+      if ((activeTool === "pencil" || activeTool === "marker" || activeTool === "erase") && !event.altKey &&
           (event.key === "+" || event.key === "-")) {
         event.preventDefault();
         onStrokeWidthChange(activeTool, event.key === "+" ? 1 : -1);

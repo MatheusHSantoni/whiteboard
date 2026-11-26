@@ -32,7 +32,7 @@ export type ElementStyle = {
   bold?: boolean;
 };
 
-export type TextMark = { index: number; color?: string; highlight?: string };
+export type TextMark = { index: number; color?: string; highlight?: string; bold?: boolean };
 
 type PositionedShape = Point & ElementStyle & { id: string };
 
@@ -162,6 +162,7 @@ function validTextMarks(value: unknown, length: number): boolean {
     if (!mark || typeof mark !== "object" || !Number.isInteger(mark.index) ||
         mark.index < 0 || mark.index >= length || indexes.has(mark.index)) return false;
     indexes.add(mark.index);
+    if (mark.bold !== undefined && typeof mark.bold !== "boolean") return false;
     if (![mark.color, mark.highlight].every((color) =>
       color === undefined || (typeof color === "string" && /^#[\da-f]{6}$/i.test(color)))) return false;
   }

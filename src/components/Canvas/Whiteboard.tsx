@@ -35,9 +35,13 @@ function makeStroke(gesture: StrokeGesture, id: string, points: number[]): Shape
   };
 }
 
-const ERASER_RADIUS = 8;
-const eraserCursorSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${ERASER_RADIUS * 2 + 2}" height="${ERASER_RADIUS * 2 + 2}"><circle cx="${ERASER_RADIUS + 1}" cy="${ERASER_RADIUS + 1}" r="${ERASER_RADIUS}" fill="none" stroke="white" stroke-width="2"/><circle cx="${ERASER_RADIUS + 1}" cy="${ERASER_RADIUS + 1}" r="${ERASER_RADIUS}" fill="none" stroke="#293452"/></svg>`;
-const ERASER_CURSOR = `url("data:image/svg+xml,${encodeURIComponent(eraserCursorSvg)}") ${ERASER_RADIUS + 1} ${ERASER_RADIUS + 1}, default`;
+function getEraserCursor(radius: number) {
+  const center = radius + 1;
+  const size = center * 2;
+  const circle = `cx="${center}" cy="${center}" r="${radius}" fill="none"`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><circle ${circle} stroke="white" stroke-width="2"/><circle ${circle} stroke="#293452"/></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${center} ${center}, default`;
+}
 
 type EraseGesture = {
   historyGroup: symbol;
@@ -90,6 +94,7 @@ export default function Whiteboard({
   const [panning, setPanning] = useState(false);
   const panGesture = useRef<PanGesture | null>(null);
   const eraseGesture = useRef<EraseGesture | null>(null);
+  const eraserRadius = (tool === "erase" ? strokeWidth ?? 16 : 16) / 2;
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [gesture, setGesture] = useState<Gesture | null>(null);
   const [textPosition, setTextPosition] = useState<(Point & ElementStyle & { id?: string; text?: string; marks?: TextMark[]; width?: number }) | null>(null);
@@ -143,7 +148,7 @@ export default function Whiteboard({
     // Uma edição pode deixar o canvas de interação desatualizado até a próxima pintura.
     active.refreshHitCanvas = true;
     const inverse = canvasLayer.getAbsoluteTransform().copy().invert();
-    onErase(hits, inverse.point(previous), inverse.point(point), ERASER_RADIUS / scale, active.historyGroup);
+    onErase(hits, inverse.point(previous), inverse.point(point), eraserRadius / scale, active.historyGroup);
   }
 
   function stopErase(pointerId: number) {
@@ -274,7 +279,7 @@ export default function Whiteboard({
       aria-label="Área de desenho"
       data-surface={surface.dark ? "dark" : undefined}
       style={{
-        cursor: tool === "erase" && !panning ? ERASER_CURSOR : undefined,
+        cursor: tool === "erase" && !panning ? getEraserCursor(eraserRadius) : undefined,
         backgroundColor: surface.color,
         backgroundSize: `${20 * scale}px ${20 * scale}px`,
         backgroundPosition: `${offset.x}px ${offset.y}px`,

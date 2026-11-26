@@ -441,6 +441,11 @@ test("desenha à mão livre com lápis e marca-texto e ajusta a espessura pelo t
   )).toBeGreaterThan(0);
   await page.keyboard.press("Alt+b");
   await expect(canvas).toHaveCSS("cursor", /data:image\/svg\+xml.*9 9, default/);
+  await page.keyboard.press("Shift+Equal");
+  await expect(page.getByText(/Diâmetro: 18 px/)).toBeVisible();
+  await expect(canvas).toHaveCSS("cursor", /data:image\/svg\+xml.*10 10, default/);
+  await page.keyboard.press("Minus");
+  await expect(canvas).toHaveCSS("cursor", /data:image\/svg\+xml.*9 9, default/);
   await expect(page.getByRole("button", { name: "Borracha" })).toHaveAttribute("aria-pressed", "true");
   const bounds = await canvas.boundingBox();
   await page.mouse.move(bounds.x + 80, bounds.y + 40);
@@ -563,6 +568,20 @@ test("alterna negrito com Ctrl + B no editor e no texto selecionado", async ({ p
   await page.keyboard.press("Control+b");
   await expect.poll(() => page.evaluate(savedShapes)).toEqual([
     expect.objectContaining({ text: "Texto em negrito", bold: false }),
+  ]);
+  await canvas.dblclick({ position: { x: 80, y: 110 } });
+  await editor.press("Home");
+  for (let index = 0; index < 5; index++) await editor.press("Shift+ArrowRight");
+  await editor.press("Control+b");
+  await expect(editor).toHaveCSS("font-weight", "400");
+  await expect(page.locator(".text-editor-preview span").first()).toHaveCSS("font-weight", "700");
+  await editor.press("Enter");
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({
+      text: "Texto em negrito",
+      bold: false,
+      marks: Array.from({ length: 5 }, (_, index) => ({ index, bold: true })),
+    }),
   ]);
 });
 

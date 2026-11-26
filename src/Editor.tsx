@@ -63,7 +63,7 @@ export function Editor({ boardId, storage, server, deleting, navigation }: {
     rectangle: { noFill: true }, circle: { noFill: true }, arrow: {}, line: {}, text: {},
     pencil: {}, marker: { color: "#fff176" },
   });
-  const [strokeWidths, setStrokeWidths] = useState({ pencil: 3, marker: 18 });
+  const [strokeWidths, setStrokeWidths] = useState({ pencil: 3, marker: 18, erase: 16 });
   const [selection, setSelectedIds] = useState<string[]>([]);
   const [surfacePercent, setSurfacePercent] = useState(50);
   const surface = getBoardSurface(surfacePercent);
@@ -123,14 +123,13 @@ export function Editor({ boardId, storage, server, deleting, navigation }: {
   );
   const drawingStyle = tool === "select" || tool === "erase" ? undefined : styles[tool];
 
-  const freehand = tool === "pencil" || tool === "marker" ? tool : undefined;
-  const strokeWidth = freehand ? strokeWidths[freehand] : undefined;
+  const strokeWidth = tool === "pencil" || tool === "marker" || tool === "erase" ? strokeWidths[tool] : undefined;
 
-  function changeStrokeWidth(tool: FreehandTool, direction: number) {
-    const step = tool === "marker" ? 2 : 1;
+  function changeStrokeWidth(tool: FreehandTool | "erase", direction: number) {
+    const step = tool === "pencil" ? 1 : 2;
     setStrokeWidths((current) => ({
       ...current,
-      [tool]: Math.max(1, Math.min(MAX_STROKE_WIDTH, current[tool] + direction * step)),
+      [tool]: Math.max(tool === "erase" ? 2 : 1, Math.min(MAX_STROKE_WIDTH, current[tool] + direction * step)),
     }));
   }
 
@@ -377,7 +376,7 @@ export function Editor({ boardId, storage, server, deleting, navigation }: {
             selected?.type === "image" ? "Arraste a alça no canto da imagem para redimensionar." :
             selected && ["square", "rectangle", "circle"].includes(selected.type)
               ? "Arraste a alça roxa para redimensionar a forma." : instructions[tool]}
-          {strokeWidth !== undefined && ` Espessura: ${strokeWidth} px (+ / −).`}
+          {strokeWidth !== undefined && ` ${tool === "erase" ? "Diâmetro" : "Espessura"}: ${strokeWidth} px (+ / −).`}
         </p>
       )}
       {imageError && <p className="message" role="alert">{imageError}</p>}

@@ -67,7 +67,7 @@ export default function InlineTextEditor({ initialText, initialBold, initialMark
   function format(property: "color" | "highlight", value?: string) {
     for (let index = selection.start; index < selection.end; index++) {
       const updated = { ...styles.get(index), index, [property]: value };
-      if (updated.color || updated.highlight) styles.set(index, updated);
+      if (updated.color || updated.highlight || updated.bold !== undefined) styles.set(index, updated);
       else styles.delete(index);
     }
     setMarks([...styles.values()].sort((left, right) => left.index - right.index));
@@ -79,6 +79,22 @@ export default function InlineTextEditor({ initialText, initialBold, initialMark
     onCommit(content, marks
       .filter(({ index }) => index >= start && index < start + content.length)
       .map((mark) => ({ ...mark, index: mark.index - start })), bold);
+  }
+
+  function toggleBold(start: number, end: number) {
+    if (start === end) {
+      setBold((current) => !current);
+      return;
+    }
+    const base = Boolean(bold);
+    const indexes = Array.from({ length: end - start }, (_, offset) => start + offset);
+    const enabled = !indexes.every((index) => styles.get(index)?.bold ?? base);
+    for (const index of indexes) {
+      const mark = { ...styles.get(index), index, bold: enabled === base ? undefined : enabled };
+      if (mark.color || mark.highlight || mark.bold !== undefined) styles.set(index, mark);
+      else styles.delete(index);
+    }
+    setMarks([...styles.values()].sort((left, right) => left.index - right.index));
   }
 
   return (
@@ -98,6 +114,7 @@ export default function InlineTextEditor({ initialText, initialBold, initialMark
               color: dark ? undefined : mark?.color,
               backgroundColor: dark && mark?.highlight ? `${mark.highlight}66` : mark?.highlight,
               textDecoration: struck ? "line-through" : undefined,
+              fontWeight: mark?.bold === undefined ? undefined : mark.bold ? "bold" : "normal",
             }}>{char}</span>
             : char);
           result.index += char.length;
@@ -126,7 +143,10 @@ export default function InlineTextEditor({ initialText, initialBold, initialMark
           if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey &&
               event.key.toLowerCase() === "b") {
             event.preventDefault();
-            if (!event.repeat) setBold((current) => !current);
+            if (!event.repeat) {
+              const { selectionStart, selectionEnd } = event.currentTarget;
+              toggleBold(selectionStart, selectionEnd);
+            }
             return;
           }
           if (event.ctrlKey && event.shiftKey && !event.altKey && /^Digit[789]$/.test(event.code)) {

@@ -1,5 +1,5 @@
 import type { CharRenderProps } from "konva/lib/shapes/Text";
-import { DEFAULT_FONT_SIZE, type Shape } from "../../types/shapes";
+import { DEFAULT_FONT_SIZE, FONTS, type Shape } from "../../types/shapes";
 import { completedChecklistRanges } from "../../utils/checklist";
 
 export function textCharacterStyle(shape: Extract<Shape, { type: "text" }>, dark = false) {
@@ -16,6 +16,9 @@ export function textCharacterStyle(shape: Extract<Shape, { type: "text" }>, dark
     cursor = start + char.length;
 
     const mark = marks.get(start);
+    if (mark?.bold !== undefined) {
+      context.setAttr("font", `${mark.bold ? "bold" : "normal"} ${fontSize}px ${FONTS[shape.font ?? "system"].stack}`);
+    }
     if (mark?.highlight) {
       context.save();
       context.fillStyle = dark ? `${mark.highlight}66` : mark.highlight;

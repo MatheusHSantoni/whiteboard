@@ -301,33 +301,35 @@ export function Editor({ boardId, storage, server, deleting, navigation }: {
   }
 
   return (
-    <main className="app">
+    <main className="app board-editor">
       <header className="app-header">
         <h1>Whiteboard</h1>
+        <div className="board-library">
+          {navigation?.(board.dirty || importing || replaced)}
+        </div>
         <div className="board-header-controls">
           {!disabled && !board.saveFailed && <span className="save-status" role="status">{status}</span>}
-          <label className="board-surface">
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={1}
-              value={surfacePercent}
-              aria-label="Fundo da lousa"
-              aria-valuetext={`${surfacePercent}%`}
-              onChange={(event) => setSurfacePercent(event.currentTarget.valueAsNumber)}
-            />
-            <span aria-hidden="true">{surfacePercent}%</span>
-          </label>
+          <div className="board-view-controls">
+            <label className="board-surface">
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={surfacePercent}
+                aria-label="Fundo da lousa"
+                aria-valuetext={`${surfacePercent}%`}
+                onChange={(event) => setSurfacePercent(event.currentTarget.valueAsNumber)}
+              />
+              <span aria-hidden="true">{surfacePercent}%</span>
+            </label>
+            <button type="button" disabled={!canExport && !board.saveConflict} onClick={() => exportDialog.current?.showModal()}>
+              Exportar
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="board-library">
-        {navigation?.(board.dirty || importing || replaced)}
-        <button type="button" disabled={!canExport && !board.saveConflict} onClick={() => exportDialog.current?.showModal()}>
-          Exportar
-        </button>
-      </div>
       <dialog ref={tabNotice} className="board-dialog" aria-labelledby="board-tab-title" aria-describedby="board-tab-message">
         <h2 id="board-tab-title">Board aberto em duas abas</h2>
         <p id="board-tab-message">{replaced
@@ -351,21 +353,6 @@ export function Editor({ boardId, storage, server, deleting, navigation }: {
       </dialog>
       {exportError && <p className="message" role="alert">{exportError}</p>}
 
-      <Toolbar
-        activeTool={tool}
-        onToolChange={setTool}
-        disabled={disabled}
-        style={selected?.type === "image" ? undefined : selected ?? groupStyle ?? drawingStyle}
-        mixedColors={Boolean(mixedColors)}
-        styleType={selected?.type ?? tool}
-        onImportImage={(file) => void importImage(file)}
-        importing={importing}
-        onStyleChange={changeStyle}
-        onStrokeWidthChange={changeStrokeWidth}
-        onUndo={board.canUndo ? board.undo : undefined}
-        onRedo={board.canRedo ? board.redo : undefined}
-        onDelete={tool === "select" && selectedIds.length ? () => eraseShapes(selectedIds) : undefined}
-      />
       {!disabled && (
         <p className="instructions">
           {tool === "select" && selectedIds.length > 1
@@ -398,42 +385,59 @@ export function Editor({ boardId, storage, server, deleting, navigation }: {
         </div>
       )}
 
-      <div className="board-area" ref={boardArea} inert={replaced}>
-        <Whiteboard
-          layer={drawingLayer}
-          tool={tool}
-          drawingStyle={drawingStyle}
-          strokeWidth={strokeWidth}
-          scale={zoom / 100}
-          surface={surface}
-          onErase={eraseAt}
-          selectedIds={exportingPng ? [] : selectedIds}
-          onSelect={setSelectedIds}
-          shapes={board.shapes}
+      <div className="board-workspace">
+        <Toolbar
+          activeTool={tool}
+          onToolChange={setTool}
           disabled={disabled}
-          onAdd={addShape}
-          onTextEdit={editText}
-          onMove={moveShapes}
-          onImageResize={changeImageSize}
-          onResize={changeShapeSize}
-          onArrowBend={changeArrowBend}
+          style={selected?.type === "image" ? undefined : selected ?? groupStyle ?? drawingStyle}
+          mixedColors={Boolean(mixedColors)}
+          styleType={selected?.type ?? tool}
+          onImportImage={(file) => void importImage(file)}
+          importing={importing}
+          onStyleChange={changeStyle}
+          onStrokeWidthChange={changeStrokeWidth}
+          onUndo={board.canUndo ? board.undo : undefined}
+          onRedo={board.canRedo ? board.redo : undefined}
+          onDelete={tool === "select" && selectedIds.length ? () => eraseShapes(selectedIds) : undefined}
         />
-        <div className="zoom-controls" role="group" aria-label="Zoom do quadro">
-          <button
-            type="button"
-            aria-label="Diminuir zoom"
-            disabled={zoom <= MIN_ZOOM}
-            onClick={() => setZoom((value) => stepZoom(value, -1))}
-          >−</button>
-          <button type="button" title="Restaurar zoom para 100%" onClick={() => setZoom(100)}>
-            {zoom}%
-          </button>
-          <button
-            type="button"
-            aria-label="Aumentar zoom"
-            disabled={zoom >= MAX_ZOOM}
-            onClick={() => setZoom((value) => stepZoom(value, 1))}
-          >+</button>
+        <div className="board-area" ref={boardArea} inert={replaced}>
+          <Whiteboard
+            layer={drawingLayer}
+            tool={tool}
+            drawingStyle={drawingStyle}
+            strokeWidth={strokeWidth}
+            scale={zoom / 100}
+            surface={surface}
+            onErase={eraseAt}
+            selectedIds={exportingPng ? [] : selectedIds}
+            onSelect={setSelectedIds}
+            shapes={board.shapes}
+            disabled={disabled}
+            onAdd={addShape}
+            onTextEdit={editText}
+            onMove={moveShapes}
+            onImageResize={changeImageSize}
+            onResize={changeShapeSize}
+            onArrowBend={changeArrowBend}
+          />
+          <div className="zoom-controls" role="group" aria-label="Zoom do quadro">
+            <button
+              type="button"
+              aria-label="Diminuir zoom"
+              disabled={zoom <= MIN_ZOOM}
+              onClick={() => setZoom((value) => stepZoom(value, -1))}
+            >−</button>
+            <button type="button" title="Restaurar zoom para 100%" onClick={() => setZoom(100)}>
+              {zoom}%
+            </button>
+            <button
+              type="button"
+              aria-label="Aumentar zoom"
+              disabled={zoom >= MAX_ZOOM}
+              onClick={() => setZoom((value) => stepZoom(value, 1))}
+            >+</button>
+          </div>
         </div>
       </div>
     </main>

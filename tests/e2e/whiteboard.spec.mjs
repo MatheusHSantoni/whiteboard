@@ -60,6 +60,29 @@ function savedShapes() {
   });
 }
 
+test("organiza as ferramentas e mantém Exportar abaixo do controle de fundo", async ({ page }) => {
+  await page.goto("/");
+  const tools = page.locator(".tool-dock");
+  const styles = page.getByRole("group", { name: "Estilo do elemento" });
+  const canvas = page.getByRole("region", { name: "Área de desenho" });
+  const exportar = page.getByRole("button", { name: "Exportar", exact: true });
+  const background = page.getByRole("slider", { name: "Fundo da lousa" });
+
+  await expect(tools.getByRole("button", { name: "Seta" })).toBeEnabled();
+  expect((await exportar.boundingBox()).y).toBeGreaterThan((await background.boundingBox()).y);
+  const canvasBox = await canvas.boundingBox();
+  const toolsBox = await tools.boundingBox();
+  const styleBox = await styles.boundingBox();
+  expect(toolsBox.y).toBe(styleBox.y);
+  expect(Math.max(toolsBox.y + toolsBox.height, styleBox.y + styleBox.height)).toBeLessThan(canvasBox.y);
+  expect(canvasBox.width).toBeGreaterThan(1200);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const panel = await styles.boundingBox();
+  expect(panel.y + panel.height).toBeLessThanOrEqual((await canvas.boundingBox()).y);
+  expect(await page.evaluate(() => globalThis.document.documentElement.scrollWidth)).toBe(390);
+});
+
 test("salva automaticamente desenhos e edições e recupera após recarregar", async ({ page }) => {
   await page.goto("/");
   const canvas = page.locator("canvas").first();
@@ -77,7 +100,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   await expect(shortcutList).toBeHidden();
   await shortcuts.click();
   await expect(shortcutList).toBeVisible();
-  await canvas.click({ position: { x: 500, y: 30 } });
+  await canvas.click({ position: { x: 20, y: 30 } });
   await expect(shortcutList).toBeHidden();
 
   await page.getByRole("button", { name: "Diminuir zoom" }).click();
@@ -111,8 +134,8 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   await drag(page, canvas, { x: 45, y: 50 }, { x: 105, y: 105 });
 
   await shortcuts.click();
-  await expect(page.getByRole("button", { name: "Retângulo" })).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("button", { name: "Seta" }).click();
+  await expect(shortcutList.getByRole("button", { name: "Retângulo" })).toHaveAttribute("aria-pressed", "true");
+  await shortcutList.getByRole("button", { name: "Seta" }).click();
   await expect(shortcutList).toBeHidden();
   await expect(color).toHaveValue("#293452");
   await color.fill("#16805c");

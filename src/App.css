@@ -32,7 +32,13 @@ body { margin: 0; }
   gap: 8px;
 }
 
-.board-header-controls { gap: 16px; }
+.board-header-controls { margin-inline-start: auto; gap: 16px; }
+
+.board-view-controls {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
 
 .board-surface {
   color: #293452;
@@ -85,10 +91,90 @@ p { margin: 0; }
   font-size: 0.875rem;
 }
 
-.toolbar, .zoom-controls {
+.zoom-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.board-workspace {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: auto minmax(420px, 1fr);
+  flex: 1;
+  gap: 6px;
+}
+
+.toolbar { display: contents; }
+
+.tool-dock, .style-dock {
+  align-self: start;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid #d7dbea;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 4px 14px #222d4914;
+}
+
+.tool-dock {
+  justify-self: end;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 4;
+}
+
+.drawing-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.style-dock {
+  justify-self: start;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 3;
+}
+
+.style-dock .fill-menu > .shortcut-list {
+  left: auto;
+  right: 0;
+}
+
+.board-editor {
+  gap: 6px;
+  padding: 12px;
+}
+
+.board-editor .app-header { gap: 6px 12px; }
+.board-editor h1 { font-size: 1.25rem; }
+.board-editor .board-header-controls { gap: 8px; }
+.board-editor .board-view-controls { gap: 2px; }
+.board-editor .board-surface input { width: 80px; }
+.board-editor .board-library { gap: 4px 8px; }
+
+.board-editor .app-header :is(button, summary, select),
+.tool-dock :is(.icon-tool-button, .compact-style, .shortcuts > summary),
+.style-dock > :is(button, label),
+.style-dock > .fill-menu > summary {
+  padding: 4px 6px;
+  font-size: 0.75rem;
+}
+
+.tool-dock .icon-tool-button { min-width: 28px; min-height: 28px; }
+.tool-dock .icon-tool-button :is(img, svg) { width: 16px; height: 16px; }
+.style-dock > .tool-color { justify-content: space-between; gap: 4px; }
+.style-dock > .tool-color:not(.compact-style) input { width: 24px; height: 20px; }
+
+@media (max-width: 1000px) {
+  .board-workspace {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(420px, 1fr);
+  }
+  .tool-dock, .style-dock { justify-self: start; }
+  .style-dock .fill-menu > .shortcut-list { left: 0; right: auto; }
 }
 
 button {
@@ -243,6 +329,7 @@ button:focus-visible {
 .shortcut-list kbd { white-space: nowrap; }
 
 .board-area {
+  grid-column: 1 / -1;
   position: relative;
   display: flex;
   flex: 1;

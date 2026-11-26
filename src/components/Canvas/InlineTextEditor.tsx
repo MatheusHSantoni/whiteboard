@@ -13,10 +13,11 @@ const highlights = [
 
 type InlineTextEditorProps = {
   initialText: string;
+  initialBold?: boolean;
   dark: boolean;
   initialMarks: TextMark[];
   style: CSSProperties;
-  onCommit: (text: string, marks: TextMark[]) => void;
+  onCommit: (text: string, marks: TextMark[], bold?: boolean) => void;
   onCancel: () => void;
 };
 
@@ -38,9 +39,10 @@ function updateMarks(previous: string, next: string, marks: TextMark[]) {
   });
 }
 
-export default function InlineTextEditor({ initialText, initialMarks, dark, style, onCommit, onCancel }: InlineTextEditorProps) {
+export default function InlineTextEditor({ initialText, initialBold, initialMarks, dark, style, onCommit, onCancel }: InlineTextEditorProps) {
   const [text, setText] = useState(initialText);
   const [marks, setMarks] = useState(initialMarks);
+  const [bold, setBold] = useState(initialBold);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
   const editor = useRef<HTMLTextAreaElement>(null);
   const pendingSelection = useRef<{ start: number; end: number } | null>(null);
@@ -76,13 +78,13 @@ export default function InlineTextEditor({ initialText, initialMarks, dark, styl
     const start = text.length - text.trimStart().length;
     onCommit(content, marks
       .filter(({ index }) => index >= start && index < start + content.length)
-      .map((mark) => ({ ...mark, index: mark.index - start })));
+      .map((mark) => ({ ...mark, index: mark.index - start })), bold);
   }
 
   return (
     <div
       className="inline-text-editor"
-      style={style}
+      style={{ ...style, fontWeight: bold ? "bold" : "normal" }}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) commit();
       }}
@@ -121,6 +123,12 @@ export default function InlineTextEditor({ initialText, initialMarks, dark, styl
         }}
         onKeyDown={(event) => {
           if (event.nativeEvent.isComposing) return;
+          if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey &&
+              event.key.toLowerCase() === "b") {
+            event.preventDefault();
+            if (!event.repeat) setBold((current) => !current);
+            return;
+          }
           if (event.ctrlKey && event.shiftKey && !event.altKey && /^Digit[789]$/.test(event.code)) {
             event.preventDefault();
             const { selectionStart, selectionEnd } = event.currentTarget;

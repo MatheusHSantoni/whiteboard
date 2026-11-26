@@ -71,7 +71,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   const shortcutList = page.locator("dl.shortcut-list");
   await expect(shortcutList).toBeVisible();
   await expect(shortcutList.locator("kbd")).toHaveText([
-    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + L", "Alt + P", "Alt + M", "Alt + B", "Alt + T", "Ctrl + arrastar", "Shift + clique", "+ / −", "Ctrl + Z", "Ctrl + Y", "Ctrl + C", "Ctrl + V", "Delete", "Enter", "Ctrl + Shift + 7", "Ctrl + Shift + 8", "Ctrl + Shift + 9", "Shift + Enter", "Esc",
+    "Alt + V", "Alt + S", "Alt + C", "Alt + A", "Alt + L", "Alt + P", "Alt + M", "Alt + B", "Alt + T", "Ctrl + arrastar", "Shift + clique", "+ / −", "Ctrl + Z", "Ctrl + Y", "Ctrl + C", "Ctrl + V", "Delete", "Enter", "Ctrl + Shift + 7", "Ctrl + Shift + 8", "Ctrl + Shift + 9", "Shift + Enter", "Ctrl + B", "Esc",
   ]);
   await page.keyboard.press("Enter");
   await expect(shortcutList).toBeHidden();
@@ -542,6 +542,28 @@ test("preserva o backup local e recarrega a revisão do servidor após um confli
   await drag(page, canvas, { x: 40, y: 50 }, { x: 90, y: 90 });
   await expect(page.getByRole("status")).toHaveText("Salvo no servidor");
   expect(revisions).toEqual([1, 2]);
+});
+
+test("alterna negrito com Ctrl + B no editor e no texto selecionado", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  const canvas = page.locator("canvas").first();
+  const editor = page.getByRole("textbox", { name: "Texto do elemento" });
+  await page.keyboard.press("Alt+t");
+  await canvas.click({ position: { x: 60, y: 100 } });
+  await editor.fill("Texto em negrito");
+  await editor.press("Control+b");
+  await expect(editor).toHaveCSS("font-weight", "700");
+  await editor.press("Enter");
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ text: "Texto em negrito", bold: true }),
+  ]);
+  await page.keyboard.press("Alt+v");
+  await canvas.click({ position: { x: 80, y: 110 } });
+  await page.keyboard.press("Control+b");
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ text: "Texto em negrito", bold: false }),
+  ]);
 });
 
 test("continua listas numeradas, de marcadores e de tarefas com Shift + Enter", async ({ page }) => {

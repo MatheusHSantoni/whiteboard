@@ -252,12 +252,12 @@ export function Editor({ boardId, storage, server, deleting, navigation }: {
     ));
   }
 
-  function editText(id: string, text: string, marks: TextMark[]) {
+  function editText(id: string, text: string, marks: TextMark[], bold?: boolean) {
     if (!text) {
       eraseShapes([id]);
       return;
     }
-    updateShape(id, (shape) => shape.type === "text" ? { ...shape, text, marks } : shape);
+    updateShape(id, (shape) => shape.type === "text" ? { ...shape, text, marks, bold: bold ?? shape.bold } : shape);
   }
 
   function changeArrowBend(id: string, bend: Point) {

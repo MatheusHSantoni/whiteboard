@@ -61,6 +61,11 @@ export default function Toolbar({
 
       if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
         const key = event.key.toLowerCase();
+        if (key === "b" && styleType === "text" && !target?.closest("dialog")) {
+          event.preventDefault();
+          if (!event.repeat) onStyleChange({ bold: !style?.bold });
+          return;
+        }
         const action = key === "z" ? onUndo : key === "y" ? onRedo : undefined;
         if (action) {
           event.preventDefault();
@@ -93,7 +98,7 @@ export default function Toolbar({
 
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
-  }, [activeTool, disabled, onToolChange, onDelete, onUndo, onRedo, onStrokeWidthChange]);
+  }, [activeTool, disabled, onToolChange, onDelete, onUndo, onRedo, onStrokeWidthChange, onStyleChange, style?.bold, styleType]);
 
   return (
     <nav className="toolbar" aria-label="Ferramentas do quadro">
@@ -176,6 +181,7 @@ export default function Toolbar({
             <dt>Quebrar linha no texto</dt>
             <dd><kbd>Shift + Enter</kbd></dd>
           </div>
+          <div><dt>Alternar negrito</dt><dd><kbd>Ctrl + B</kbd></dd></div>
           <div>
             <dt>Cancelar texto</dt>
             <dd><kbd>Esc</kbd></dd>
@@ -296,6 +302,7 @@ export default function Toolbar({
         type="button"
         aria-label="Negrito"
         aria-pressed={style?.bold === true}
+        aria-keyshortcuts="Control+B Meta+B"
         title="Negrito"
         disabled={disabled || styleType !== "text"}
         onClick={() => onStyleChange({ bold: !style?.bold })}

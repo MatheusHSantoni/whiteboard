@@ -66,7 +66,7 @@ type WhiteboardProps = {
   shapes: Shape[];
   disabled: boolean;
   onAdd: (shape: Shape) => void;
-  onTextEdit: (id: string, text: string, marks: TextMark[]) => void;
+  onTextEdit: (id: string, text: string, marks: TextMark[], bold?: boolean) => void;
   onMove: (ids: string[], delta: Point) => void;
   onImageResize: (id: string, width: number, height: number) => void;
   onResize: (id: string, point: Point) => void;
@@ -358,6 +358,7 @@ export default function Whiteboard({
       {textPosition && (
         <InlineTextEditor
           initialText={textPosition.text ?? ""}
+          initialBold={textPosition.bold}
           dark={surface.dark}
           initialMarks={textPosition.marks ?? []}
           style={{
@@ -368,17 +369,17 @@ export default function Whiteboard({
             color: surface.dark ? "#fff" : textPosition.color,
             fontFamily: FONTS[textPosition.font ?? "system"].stack,
             fontSize: textPosition.fontSize ?? DEFAULT_FONT_SIZE,
-            fontWeight: textPosition.bold ? "bold" : "normal",
             width: textPosition.width ?? DEFAULT_TEXT_WIDTH,
           }}
-          onCommit={(text, marks) => {
-            const { id, text: initialText, marks: initialMarks, ...position } = textPosition;
+          onCommit={(text, marks, bold) => {
+            const { id, text: initialText, marks: initialMarks, bold: initialBold, ...position } = textPosition;
             if (id) {
-              if (text !== initialText || JSON.stringify(marks) !== JSON.stringify(initialMarks ?? [])) {
-                onTextEdit(id, text, marks);
+              if (text !== initialText || Boolean(bold) !== Boolean(initialBold) ||
+                  JSON.stringify(marks) !== JSON.stringify(initialMarks ?? [])) {
+                onTextEdit(id, text, marks, bold);
               }
             } else if (text) {
-              onAdd({ id: crypto.randomUUID(), type: "text", ...position, text, marks });
+              onAdd({ id: crypto.randomUUID(), type: "text", ...position, text, marks, bold });
             }
             setTextPosition(null);
           }}

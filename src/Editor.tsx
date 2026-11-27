@@ -40,7 +40,7 @@ function stepZoom(zoom: number, direction: number) {
 }
 
 const instructions: Record<Tool, string> = {
-  select: "Clique em um elemento ou arraste numa área vazia para selecionar vários.",
+  select: "",
   pencil: "Arraste para desenhar livremente.",
   marker: "Arraste para destacar uma área da lousa.",
   erase: "Arraste para apagar partes dos traços. Use Delete para apagar um traço selecionado.",
@@ -172,7 +172,7 @@ export function Editor({ boardId, storage, server, deleting, navigation }: {
     function canUseClipboard(event: ClipboardEvent): boolean {
       const target = event.target;
       return !event.defaultPrevented && !(target instanceof HTMLElement &&
-        (target.isContentEditable || target.closest("input, textarea, select")));
+        (target.isContentEditable || target.closest("dialog, input, textarea, select")));
     }
 
     function copy(event: ClipboardEvent) {
@@ -246,9 +246,7 @@ export function Editor({ boardId, storage, server, deleting, navigation }: {
   }
 
   function changeShapeSize(id: string, point: Point) {
-    board.setShapes((shapes) => shapes.map((shape) =>
-      shape.id === id ? resizeShape(shape, point) : shape,
-    ));
+    updateShape(id, (shape) => resizeShape(shape, point));
   }
 
   function editText(id: string, text: string, marks: TextMark[], bold?: boolean) {
@@ -353,19 +351,6 @@ export function Editor({ boardId, storage, server, deleting, navigation }: {
       </dialog>
       {exportError && <p className="message" role="alert">{exportError}</p>}
 
-      {!disabled && (
-        <p className="instructions">
-          {tool === "select" && selectedIds.length > 1
-            ? `${selectedIds.length} elementos selecionados. Arraste para mover ou use Ctrl + C para copiar.`
-            : selected?.type === "text" ? "Dê dois cliques para editar ou arraste a alça roxa para mudar a largura do texto." :
-            selected?.type === "line" ? "Arraste a ponta roxa para redimensionar a linha ou o ponto branco para ajustar a curva." :
-            selected?.type === "arrow" ? "Arraste a ponta roxa para redimensionar a seta ou o ponto branco para ajustar a curva." :
-            selected?.type === "image" ? "Arraste a alça no canto da imagem para redimensionar." :
-            selected && ["square", "rectangle", "circle"].includes(selected.type)
-              ? "Arraste a alça roxa para redimensionar a forma." : instructions[tool]}
-          {strokeWidth !== undefined && ` ${tool === "erase" ? "Diâmetro" : "Espessura"}: ${strokeWidth} px (+ / −).`}
-        </p>
-      )}
       {imageError && <p className="message" role="alert">{imageError}</p>}
       {board.loading && <p role="status">Carregando quadro…</p>}
       {board.loadFailed && (
@@ -440,6 +425,19 @@ export function Editor({ boardId, storage, server, deleting, navigation }: {
           </div>
         </div>
       </div>
+      {!disabled && (tool !== "select" || selectedIds.length > 0) && (
+        <p className="instructions">
+          {tool === "select" && selectedIds.length > 1
+            ? `${selectedIds.length} elementos selecionados. Arraste para mover ou use Ctrl + C para copiar.`
+            : selected?.type === "text" ? "Dê dois cliques para editar ou arraste a alça roxa para mudar a largura do texto." :
+            selected?.type === "line" ? "Arraste a ponta roxa para redimensionar a linha ou o ponto branco para ajustar a curva." :
+            selected?.type === "arrow" ? "Arraste a ponta roxa para redimensionar a seta ou o ponto branco para ajustar a curva." :
+            selected?.type === "image" ? "Arraste a alça no canto da imagem para redimensionar." :
+            selected && ["square", "rectangle", "circle"].includes(selected.type)
+              ? "Arraste a alça roxa para redimensionar a forma." : instructions[tool]}
+          {strokeWidth !== undefined && ` ${tool === "erase" ? "Diâmetro" : "Espessura"}: ${strokeWidth} px (+ / −).`}
+        </p>
+      )}
     </main>
   );
 }

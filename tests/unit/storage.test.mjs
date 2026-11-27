@@ -45,8 +45,8 @@ test("lista o Board existente e salva cada novo Board separadamente", async () =
   assert.deepEqual(await listLocalBoards(), [imported]);
   assert.deepEqual(await loadBoard(), []);
   assert.deepEqual(await loadBoard(blank.id), []);
-  await assert.rejects(saveBoard([legacyShape], main.id));
-  await assert.rejects(saveBoard([legacyShape], blank.id));
+  await assert.rejects(saveBoard([legacyShape], main.id), { name: "AbortError" });
+  await assert.rejects(saveBoard([legacyShape], blank.id), { name: "AbortError" });
   assert.deepEqual(await loadBoard(imported.id), [importedShape]);
 
   await deleteLocalBoard(imported.id);

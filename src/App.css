@@ -98,8 +98,9 @@ p { margin: 0; }
 }
 
 .board-workspace {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(420px, 1fr);
   flex: 1;
   gap: 6px;
@@ -107,7 +108,9 @@ p { margin: 0; }
 
 .toolbar { display: contents; }
 
-.tool-dock, .style-dock {
+.tool-dock-track { grid-area: 1 / 1; }
+
+.tool-dock {
   align-self: start;
   display: flex;
   gap: 4px;
@@ -116,14 +119,25 @@ p { margin: 0; }
   border-radius: 14px;
   background: #fff;
   box-shadow: 0 4px 14px #222d4914;
-}
-
-.tool-dock {
-  justify-self: end;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
   flex-wrap: wrap;
   position: relative;
   z-index: 4;
 }
+
+.tool-dock[data-align="right"] > .shortcuts > .shortcut-list {
+  left: auto;
+  right: 0;
+}
+
+.dock-grip {
+  cursor: grab;
+  touch-action: none;
+}
+
+.dock-grip:active { cursor: grabbing; }
 
 .drawing-tools {
   display: flex;
@@ -132,10 +146,11 @@ p { margin: 0; }
 }
 
 .style-dock {
-  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   flex-wrap: wrap;
-  position: relative;
-  z-index: 3;
+  max-width: 100%;
 }
 
 .style-dock .fill-menu > .shortcut-list {
@@ -143,13 +158,18 @@ p { margin: 0; }
   right: 0;
 }
 
-.board-editor {
-  gap: 6px;
-  padding: 12px;
+@media (max-width: 950px) {
+  .style-dock .fill-menu > .shortcut-list { left: 0; right: auto; }
 }
 
-.board-editor .app-header { gap: 6px 12px; }
-.board-editor h1 { font-size: 1.25rem; }
+.board-editor {
+  gap: 4px;
+  padding: 8px 12px;
+}
+
+.board-editor .app-header { gap: 4px 10px; }
+.board-editor h1 { font-size: 1.05rem; }
+.board-editor .app-header :is(.save-status, .board-surface, .board-library label) { font-size: 0.75rem; }
 .board-editor .board-header-controls { gap: 8px; }
 .board-editor .board-view-controls { gap: 2px; }
 .board-editor .board-surface input { width: 80px; }
@@ -163,19 +183,26 @@ p { margin: 0; }
   font-size: 0.75rem;
 }
 
+.board-editor .app-header :is(button, summary, select) { padding-block: 2px; }
+
 .tool-dock .icon-tool-button { min-width: 28px; min-height: 28px; }
 .tool-dock .icon-tool-button :is(img, svg) { width: 16px; height: 16px; }
 .style-dock > .tool-color { justify-content: space-between; gap: 4px; }
-.style-dock > .tool-color:not(.compact-style) input { width: 24px; height: 20px; }
-
-@media (max-width: 1000px) {
-  .board-workspace {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(420px, 1fr);
-  }
-  .tool-dock, .style-dock { justify-self: start; }
-  .style-dock .fill-menu > .shortcut-list { left: 0; right: auto; }
+.color-swatch {
+  align-self: center;
+  width: 26px;
+  height: 26px;
+  padding: 4px;
+  border: 1px solid #d7dbea;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
 }
+
+.color-swatch::-webkit-color-swatch-wrapper { padding: 0; }
+.color-swatch::-webkit-color-swatch { border: 0; border-radius: 4px; }
+.color-swatch::-moz-color-swatch { border: 0; border-radius: 4px; }
+.color-swatch:disabled { opacity: 0.55; cursor: default; }
 
 button {
   padding: 8px 12px;

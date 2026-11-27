@@ -34,7 +34,10 @@ function serverStorage(id: string): BoardStorage {
   let revision: number;
   return {
     async load() {
-      const board = await request<{ shapes: Shape[]; revision: number }>(path);
+      const board = await request<{ shapes: unknown; revision: number } | null>(path);
+      if (!board || !isShapeList(board.shapes) || !Number.isSafeInteger(board.revision) || board.revision < 0) {
+        throw new Error("O quadro salvo contém dados inválidos.");
+      }
       revision = board.revision;
       return board.shapes;
     },

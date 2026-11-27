@@ -28,7 +28,7 @@ async function withBoardStore<T>(
       const request = operation(transaction.objectStore(STORE));
       // A requisição pode terminar antes de a transação confirmar todas as operações.
       transaction.oncomplete = () => resolve(request.result);
-      transaction.onabort = () => reject(request.error ?? transaction.error);
+      transaction.onabort = () => reject(transaction.error ?? new DOMException("A transação foi cancelada.", "AbortError"));
     });
   } finally {
     database.close();

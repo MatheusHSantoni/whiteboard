@@ -60,10 +60,64 @@ function savedShapes() {
   });
 }
 
+test("mantém o desenho ao pressionar atalhos com o diálogo de exportação aberto", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  const canvas = page.locator("canvas").first();
+  await page.keyboard.press("Alt+s");
+  await drag(page, canvas, { x: 40, y: 50 }, { x: 100, y: 90 });
+  await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(1);
+  await page.keyboard.press("Alt+v");
+  await canvas.click({ position: { x: 60, y: 70 } });
+
+  await page.getByRole("button", { name: "Exportar", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Exportar Board" });
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Delete");
+  await page.keyboard.press("Control+z");
+  await page.keyboard.press("Alt+t");
+
+  const download = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Board (JSON)" }).click();
+  const backup = JSON.parse(await readFile(await (await download).path(), "utf8"));
+  expect(backup.shapes).toHaveLength(1);
+  await page.keyboard.press("Delete");
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([]);
+});
+
+test("descarta o desenho quando o ponteiro é cancelado sobre uma forma", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  const canvas = page.locator("canvas").first();
+  await page.keyboard.press("Alt+s");
+  await drag(page, canvas, { x: 40, y: 50 }, { x: 100, y: 90 });
+  await expect.poll(() => page.evaluate(savedShapes)).toHaveLength(1);
+
+  const bounds = await canvas.boundingBox();
+  const clientX = bounds.x + 40;
+  const clientY = bounds.y + 70;
+  const pointerId = page.evaluate(() => new Promise((resolve) => {
+    globalThis.addEventListener("pointerdown", (event) => resolve(event.pointerId), { once: true });
+  }));
+  await page.mouse.move(bounds.x + 140, bounds.y + 130);
+  await page.mouse.down();
+  await page.mouse.move(clientX, clientY);
+  await canvas.dispatchEvent("pointercancel", {
+    pointerId: await pointerId, pointerType: "mouse", clientX, clientY, bubbles: true,
+  });
+  await page.mouse.up();
+
+  await drag(page, canvas, { x: 150, y: 50 }, { x: 200, y: 90 });
+  await expect.poll(() => page.evaluate(savedShapes)).toEqual([
+    expect.objectContaining({ type: "rectangle", x: 40, y: 50 }),
+    expect.objectContaining({ type: "rectangle", x: 150, y: 50 }),
+  ]);
+});
+
 test("organiza as ferramentas e mantém Exportar abaixo do controle de fundo", async ({ page }) => {
   await page.goto("/");
   const tools = page.locator(".tool-dock");
-  const styles = page.getByRole("group", { name: "Estilo do elemento" });
+  const styles = tools.getByRole("group", { name: "Estilo do elemento" });
   const canvas = page.getByRole("region", { name: "Área de desenho" });
   const exportar = page.getByRole("button", { name: "Exportar", exact: true });
   const background = page.getByRole("slider", { name: "Fundo da lousa" });
@@ -73,20 +127,58 @@ test("organiza as ferramentas e mantém Exportar abaixo do controle de fundo", a
   const canvasBox = await canvas.boundingBox();
   const toolsBox = await tools.boundingBox();
   const styleBox = await styles.boundingBox();
-  expect(toolsBox.y).toBe(styleBox.y);
-  expect(Math.max(toolsBox.y + toolsBox.height, styleBox.y + styleBox.height)).toBeLessThan(canvasBox.y);
+  const drawingBox = await tools.locator(".drawing-tools").boundingBox();
+  expect(drawingBox.x + drawingBox.width).toBeLessThan(styleBox.x);
+  expect(styleBox.y).toBeLessThan(drawingBox.y + drawingBox.height);
+  expect(toolsBox.y + toolsBox.height).toBeLessThan(canvasBox.y);
   expect(canvasBox.width).toBeGreaterThan(1200);
 
   await page.setViewportSize({ width: 390, height: 844 });
   const panel = await styles.boundingBox();
-  expect(panel.y + panel.height).toBeLessThanOrEqual((await canvas.boundingBox()).y);
+  const mobileTools = await tools.boundingBox();
+  expect(panel.y + panel.height).toBeLessThan(mobileTools.y + mobileTools.height);
+  expect(mobileTools.y + mobileTools.height).toBeLessThan((await canvas.boundingBox()).y);
   expect(await page.evaluate(() => globalThis.document.documentElement.scrollWidth)).toBe(390);
+});
+
+test("desliza a barra apenas na faixa superior, sem ultrapassar a página", async ({ page }) => {
+  await page.goto("/");
+  const dock = page.locator(".tool-dock");
+  const grip = page.getByRole("button", { name: "Mover barra de ferramentas" });
+  const track = await page.locator(".tool-dock-track").boundingBox();
+  const initial = await dock.boundingBox();
+  const styles = dock.getByRole("group", { name: "Estilo do elemento" });
+  const initialStyleOffset = (await styles.boundingBox()).x - initial.x;
+  const canvas = page.getByRole("region", { name: "Área de desenho" });
+  const dropY = (await canvas.boundingBox()).y + 120;
+
+  for (const fraction of [0.5, 1, 0]) {
+    const handle = await grip.boundingBox();
+    await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+    await page.mouse.down();
+    const dropX = fraction === 1 ? track.x + track.width - 1 : track.x + track.width * fraction;
+    await page.mouse.move(dropX, dropY, { steps: 5 });
+    await page.mouse.up();
+
+    const position = await dock.boundingBox();
+    expect((await styles.boundingBox()).x - position.x).toBeCloseTo(initialStyleOffset, 0);
+    expect(position.y).toBe(initial.y);
+    expect(position.x).toBeGreaterThanOrEqual(track.x - 1);
+    expect(position.x + position.width).toBeLessThanOrEqual(track.x + track.width + 1);
+    if (fraction === 1) expect(position.x + position.width).toBeCloseTo(track.x + track.width, 0);
+    if (fraction === 0) expect(position.x).toBeCloseTo(track.x, 0);
+    if (fraction === 0.5) expect(position.x).toBeGreaterThan(initial.x + 100);
+  }
+  await grip.press("ArrowRight");
+  expect((await dock.boundingBox()).x).toBeGreaterThan(initial.x);
+  expect(await page.evaluate(() => globalThis.document.documentElement.scrollWidth)).toBe(1280);
 });
 
 test("salva automaticamente desenhos e edições e recupera após recarregar", async ({ page }) => {
   await page.goto("/");
   const canvas = page.locator("canvas").first();
-  await expect(page.getByText("Clique em um elemento ou arraste numa área vazia para selecionar vários.")).toBeVisible();
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
+  await expect(page.getByText("Clique em um elemento ou arraste numa área vazia para selecionar vários.")).toHaveCount(0);
 
   const shortcuts = page.getByText("Atalhos", { exact: true });
   await shortcuts.focus();
@@ -171,7 +263,7 @@ test("salva automaticamente desenhos e edições e recupera após recarregar", a
   ]);
 
   await page.reload();
-  await expect(page.getByText("Clique em um elemento ou arraste numa área vazia para selecionar vários.")).toBeVisible();
+  await expect(page.getByRole("status")).toHaveText("Salvo neste navegador");
   await drag(page, canvas, { x: 65, y: 95 }, { x: 95, y: 95 });
   await expect(color).toHaveValue("#dc2638");
   await color.fill("#214bd5");
@@ -536,7 +628,7 @@ test("preserva o backup local e recarrega a revisão do servidor após um confli
   await page.route("**/api/boards/board-test", async (route) => {
     if (route.request().method() === "GET") {
       reads++;
-      await route.fulfill({ json: { shapes: [], revision: reads === 1 ? 1 : 2 } });
+      await route.fulfill({ json: { shapes: reads === 1 ? null : [], revision: reads < 3 ? 1 : 2 } });
       return;
     }
     revisions.push(route.request().postDataJSON().revision);
@@ -547,6 +639,8 @@ test("preserva o backup local e recarrega a revisão do servidor após um confli
 
   await page.goto("/");
   const canvas = page.locator("canvas").first();
+  await expect(page.getByRole("alert")).toHaveText("Não foi possível abrir o quadro salvo.");
+  await page.getByRole("button", { name: "Tentar novamente" }).click();
   await expect(page.getByRole("status")).toHaveText("Salvo no servidor");
   await page.keyboard.press("Alt+s");
   await drag(page, canvas, { x: 40, y: 50 }, { x: 90, y: 90 });

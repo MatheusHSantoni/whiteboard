@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import pencilIcon from "../../assets/pencil.svg";
 import markerIcon from "../../assets/marker.svg";
 import {
@@ -17,6 +17,10 @@ const tools = [
   { id: "erase", label: "Borracha", icon: "◇", key: "B" },
   { id: "text", label: "Texto", icon: "T", key: "T" },
 ] as const;
+
+function clampDockPosition(position: number) {
+  return Math.max(0, Math.min(100, position));
+}
 
 type ToolbarProps = {
   activeTool: Tool;
@@ -38,6 +42,10 @@ export default function Toolbar({
   activeTool, onToolChange, disabled, style, mixedColors, styleType, onStyleChange, onStrokeWidthChange, onDelete, onUndo, onRedo, onImportImage, importing,
 }: ToolbarProps) {
   const shortcutMenu = useRef<HTMLDetailsElement>(null);
+  const dockTrack = useRef<HTMLDivElement>(null);
+  const dock = useRef<HTMLDivElement>(null);
+  const dragStart = useRef<{ x: number; position: number } | null>(null);
+  const [dockPosition, setDockPosition] = useState(0);
 
   useEffect(() => {
     function closeShortcuts(event: PointerEvent) {
@@ -57,11 +65,11 @@ export default function Toolbar({
     function handleShortcut(event: KeyboardEvent) {
       if (disabled || event.defaultPrevented) return;
       const target = event.target instanceof HTMLElement ? event.target : null;
-      if (target?.isContentEditable || target?.closest("textarea, input:not([type=color]):not([type=file])")) return;
+      if (target?.isContentEditable || target?.closest("dialog, textarea, input:not([type=color]):not([type=file])")) return;
 
       if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey) {
         const key = event.key.toLowerCase();
-        if (key === "b" && styleType === "text" && !target?.closest("dialog")) {
+        if (key === "b" && styleType === "text") {
           event.preventDefault();
           if (!event.repeat) onStyleChange({ bold: !style?.bold });
           return;
@@ -102,229 +110,266 @@ export default function Toolbar({
 
   return (
     <nav className="toolbar" aria-label="Ferramentas do quadro">
-      <div className="tool-dock">
-        <details className="shortcuts" ref={shortcutMenu}>
-          <summary>Atalhos</summary>
-          <dl className="shortcut-list">
-            {tools.map(({ id, label, icon, key }) => (
-              <div key={id}>
-                <dt>
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    aria-pressed={activeTool === id}
-                    aria-keyshortcuts={`Alt+${key}`}
-                    onClick={(event) => {
-                      onToolChange(id);
-                      const disclosure = event.currentTarget.closest("details");
-                      if (disclosure) {
-                        disclosure.open = false;
-                        disclosure.querySelector("summary")?.focus();
-                      }
-                    }}
-                  >
-                    <span className="tool-icon" aria-hidden="true">{icon}</span>
-                    {label}
-                  </button>
-                </dt>
-                <dd><kbd>Alt + {key}</kbd></dd>
+      <div className="tool-dock-track" ref={dockTrack}>
+        <div
+          className="tool-dock"
+          ref={dock}
+          data-align={dockPosition > 50 ? "right" : "left"}
+          style={{ left: `${dockPosition}%`, translate: `${-dockPosition}%` }}
+        >
+          <button
+            type="button"
+            className="icon-tool-button dock-grip"
+            aria-label="Mover barra de ferramentas"
+            aria-keyshortcuts="ArrowLeft ArrowRight"
+            title="Arraste a barra pelos lados do cabeçalho"
+            onPointerDown={(event) => {
+              if (!event.isPrimary || event.button !== 0) return;
+              dragStart.current = { x: event.clientX, position: dockPosition };
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            onPointerMove={(event) => {
+              const start = dragStart.current;
+              if (!start || !dockTrack.current || !dock.current ||
+                  !event.currentTarget.hasPointerCapture(event.pointerId)) return;
+              const travel = dockTrack.current.clientWidth - dock.current.offsetWidth;
+              if (travel <= 0) return;
+              setDockPosition(clampDockPosition(start.position + (event.clientX - start.x) * 100 / travel));
+            }}
+            onLostPointerCapture={() => { dragStart.current = null; }}
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+              event.preventDefault();
+              const step = event.key === "ArrowLeft" ? -10 : 10;
+              setDockPosition((current) => clampDockPosition(current + step));
+            }}
+          ><span aria-hidden="true">⠿</span></button>
+          <details className="shortcuts" ref={shortcutMenu}>
+            <summary>Atalhos</summary>
+            <dl className="shortcut-list">
+              {tools.map(({ id, label, icon, key }) => (
+                <div key={id}>
+                  <dt>
+                    <button
+                      type="button"
+                      disabled={disabled}
+                      aria-pressed={activeTool === id}
+                      aria-keyshortcuts={`Alt+${key}`}
+                      onClick={(event) => {
+                        onToolChange(id);
+                        const disclosure = event.currentTarget.closest("details");
+                        if (disclosure) {
+                          disclosure.open = false;
+                          disclosure.querySelector("summary")?.focus();
+                        }
+                      }}
+                    >
+                      <span className="tool-icon" aria-hidden="true">{icon}</span>
+                      {label}
+                    </button>
+                  </dt>
+                  <dd><kbd>Alt + {key}</kbd></dd>
+                </div>
+              ))}
+              <div className="shortcut-divider">
+                <dt>Mover o Board</dt>
+                <dd><kbd>Ctrl + arrastar</kbd></dd>
               </div>
+              <div>
+                <dt>Adicionar ou remover da seleção</dt>
+                <dd><kbd>Shift + clique</kbd></dd>
+              </div>
+              <div>
+                <dt>Ajustar espessura do lápis ou marca-texto</dt>
+                <dd><kbd>+ / −</kbd></dd>
+              </div>
+              <div>
+                <dt>Desfazer última edição</dt>
+                <dd><kbd>Ctrl + Z</kbd></dd>
+              </div>
+              <div>
+                <dt>Refazer edição desfeita</dt>
+                <dd><kbd>Ctrl + Y</kbd></dd>
+              </div>
+              <div>
+                <dt>Copiar seleção</dt>
+                <dd><kbd>Ctrl + C</kbd></dd>
+              </div>
+              <div>
+                <dt>Colar elementos</dt>
+                <dd><kbd>Ctrl + V</kbd></dd>
+              </div>
+              <div>
+                <dt>Apagar seleção</dt>
+                <dd><kbd>Delete</kbd></dd>
+              </div>
+              <div>
+                <dt>Confirmar texto</dt>
+                <dd><kbd>Enter</kbd></dd>
+              </div>
+              <div>
+                <dt>Lista numerada</dt>
+                <dd><kbd>Ctrl + Shift + 7</kbd></dd>
+              </div>
+              <div>
+                <dt>Lista com marcadores</dt>
+                <dd><kbd>Ctrl + Shift + 8</kbd></dd>
+              </div>
+              <div>
+                <dt>Lista de verificação</dt>
+                <dd><kbd>Ctrl + Shift + 9</kbd></dd>
+              </div>
+              <div>
+                <dt>Quebrar linha no texto</dt>
+                <dd><kbd>Shift + Enter</kbd></dd>
+              </div>
+              <div><dt>Alternar negrito</dt><dd><kbd>Ctrl + B</kbd></dd></div>
+              <div>
+                <dt>Cancelar texto</dt>
+                <dd><kbd>Esc</kbd></dd>
+              </div>
+            </dl>
+          </details>
+          <div className="drawing-tools">
+            {tools.filter(({ id }) => id !== "erase").map(({ id, label, icon, key }) => (
+              <button
+                key={id}
+                type="button"
+                disabled={disabled}
+                className="icon-tool-button"
+                aria-label={label}
+                title={label}
+                aria-pressed={activeTool === id}
+                aria-keyshortcuts={`Alt+${key}`}
+                onClick={() => onToolChange(id)}
+              >
+                {id === "pencil" || id === "marker" ? (
+                  <img src={id === "pencil" ? pencilIcon : markerIcon} alt="" width={20} height={20} />
+                ) : <span className="tool-icon" aria-hidden="true">{icon}</span>}
+              </button>
             ))}
-            <div className="shortcut-divider">
-              <dt>Mover o Board</dt>
-              <dd><kbd>Ctrl + arrastar</kbd></dd>
-            </div>
-            <div>
-              <dt>Adicionar ou remover da seleção</dt>
-              <dd><kbd>Shift + clique</kbd></dd>
-            </div>
-            <div>
-              <dt>Ajustar espessura do lápis ou marca-texto</dt>
-              <dd><kbd>+ / −</kbd></dd>
-            </div>
-            <div>
-              <dt>Desfazer última edição</dt>
-              <dd><kbd>Ctrl + Z</kbd></dd>
-            </div>
-            <div>
-              <dt>Refazer edição desfeita</dt>
-              <dd><kbd>Ctrl + Y</kbd></dd>
-            </div>
-            <div>
-              <dt>Copiar seleção</dt>
-              <dd><kbd>Ctrl + C</kbd></dd>
-            </div>
-            <div>
-              <dt>Colar elementos</dt>
-              <dd><kbd>Ctrl + V</kbd></dd>
-            </div>
-            <div>
-              <dt>Apagar seleção</dt>
-              <dd><kbd>Delete</kbd></dd>
-            </div>
-            <div>
-              <dt>Confirmar texto</dt>
-              <dd><kbd>Enter</kbd></dd>
-            </div>
-            <div>
-              <dt>Lista numerada</dt>
-              <dd><kbd>Ctrl + Shift + 7</kbd></dd>
-            </div>
-            <div>
-              <dt>Lista com marcadores</dt>
-              <dd><kbd>Ctrl + Shift + 8</kbd></dd>
-            </div>
-            <div>
-              <dt>Lista de verificação</dt>
-              <dd><kbd>Ctrl + Shift + 9</kbd></dd>
-            </div>
-            <div>
-              <dt>Quebrar linha no texto</dt>
-              <dd><kbd>Shift + Enter</kbd></dd>
-            </div>
-            <div><dt>Alternar negrito</dt><dd><kbd>Ctrl + B</kbd></dd></div>
-            <div>
-              <dt>Cancelar texto</dt>
-              <dd><kbd>Esc</kbd></dd>
-            </div>
-          </dl>
-        </details>
-        <div className="drawing-tools">
-          {tools.filter(({ id }) => id !== "erase").map(({ id, label, icon, key }) => (
             <button
-              key={id}
               type="button"
-              disabled={disabled}
               className="icon-tool-button"
-              aria-label={label}
-              title={label}
-              aria-pressed={activeTool === id}
-              aria-keyshortcuts={`Alt+${key}`}
-              onClick={() => onToolChange(id)}
+              aria-label="Borracha"
+              aria-keyshortcuts="Alt+B"
+              title="Borracha (Alt + B)"
+              aria-pressed={activeTool === "erase"}
+              disabled={disabled}
+              onClick={() => onToolChange(activeTool === "erase" ? "select" : "erase")}
             >
-              {id === "pencil" || id === "marker" ? (
-                <img src={id === "pencil" ? pencilIcon : markerIcon} alt="" width={20} height={20} />
-              ) : <span className="tool-icon" aria-hidden="true">{icon}</span>}
+              <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m3.5 13.5 9.7-9.7a2 2 0 0 1 2.8 0l4.2 4.2a2 2 0 0 1 0 2.8L11 20H8l-4.5-3.7a2 2 0 0 1 0-2.8Z"/>
+                <path d="m8 9 8 8m-5 3h10"/>
+              </svg>
             </button>
-          ))}
-          <button
-            type="button"
-            className="icon-tool-button"
-            aria-label="Borracha"
-            aria-keyshortcuts="Alt+B"
-            title="Borracha (Alt + B)"
-            aria-pressed={activeTool === "erase"}
-            disabled={disabled}
-            onClick={() => onToolChange(activeTool === "erase" ? "select" : "erase")}
-          >
-            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="m3.5 13.5 9.7-9.7a2 2 0 0 1 2.8 0l4.2 4.2a2 2 0 0 1 0 2.8L11 20H8l-4.5-3.7a2 2 0 0 1 0-2.8Z"/>
-              <path d="m8 9 8 8m-5 3h10"/>
+          </div>
+          <label className="tool-color compact-style" title={importing ? "Abrindo imagem…" : "Inserir imagem"}>
+            <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"
+              fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="16" rx="2" />
+              <path d="m3 17 5-5 4 4 3-3 6 6" />
+              <circle cx="16" cy="9" r="1.5" />
             </svg>
-          </button>
-        </div>
-        <label className="tool-color compact-style">
-          {importing ? "Abrindo imagem…" : "Inserir imagem"}
-          <input
-            type="file"
-            accept={IMAGE_TYPES.join(",")}
-            disabled={disabled || importing}
-            aria-label="Inserir imagem"
-            onChange={(event) => {
-              const file = event.currentTarget.files?.[0];
-              event.currentTarget.value = "";
-              if (file) onImportImage(file);
-            }}
-          />
-        </label>
-      </div>
-      <div className="style-dock" role="group" aria-label="Estilo do elemento">
-        <label className="tool-color">
-          {hasFill ? "Contorno" : "Cor"}
-          <input
-            type="color"
-            aria-label="Cor da ferramenta"
-            title={hasFill ? "Cor do contorno" : undefined}
-            value={style?.color ?? DEFAULT_DRAWING_COLOR}
-            disabled={disabled || !style}
-            onChange={(event) => onStyleChange({ color: event.target.value })}
-          />
-        </label>
-        {mixedColors && (
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={() => onStyleChange({ color: style?.color ?? DEFAULT_DRAWING_COLOR })}
-          >Aplicar cor à seleção</button>
-        )}
-        <details className="shortcuts fill-menu" key={hasFill && !disabled ? "fill" : "fill-disabled"}>
-          <summary
-            aria-disabled={disabled || !hasFill}
-            tabIndex={disabled || !hasFill ? -1 : undefined}
-            onClick={(event) => {
-              if (disabled || !hasFill) event.preventDefault();
-            }}
-          >Preenchimento</summary>
-          <div className="shortcut-list">
-            <label className="tool-color">
-              Cor do preenchimento
-              <input
-                type="color"
-                value={style?.fillColor ?? DEFAULT_FILL}
-                disabled={disabled || !hasFill}
-                onChange={(event) => onStyleChange({ fillColor: event.target.value, noFill: false })}
-              />
+            <input
+              type="file"
+              accept={IMAGE_TYPES.join(",")}
+              disabled={disabled || importing}
+              aria-label="Inserir imagem"
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0];
+                event.currentTarget.value = "";
+                if (file) onImportImage(file);
+              }}
+            />
+          </label>
+          <div className="style-dock" role="group" aria-label="Estilo do elemento">
+            <input
+              className="color-swatch"
+              type="color"
+              aria-label="Cor da ferramenta"
+              title={hasFill ? "Cor do contorno" : "Cor da ferramenta"}
+              value={style?.color ?? DEFAULT_DRAWING_COLOR}
+              disabled={disabled || !style}
+              onChange={(event) => onStyleChange({ color: event.target.value })}
+            />
+            {mixedColors && (
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => onStyleChange({ color: style?.color ?? DEFAULT_DRAWING_COLOR })}
+              >Aplicar cor à seleção</button>
+            )}
+            <details className="shortcuts fill-menu" key={hasFill && !disabled ? "fill" : "fill-disabled"}>
+              <summary
+                aria-disabled={disabled || !hasFill}
+                tabIndex={disabled || !hasFill ? -1 : undefined}
+                onClick={(event) => {
+                  if (disabled || !hasFill) event.preventDefault();
+                }}
+              >Preenchimento</summary>
+              <div className="shortcut-list">
+                <label className="tool-color">
+                  Cor do preenchimento
+                  <input
+                    type="color"
+                    value={style?.fillColor ?? DEFAULT_FILL}
+                    disabled={disabled || !hasFill}
+                    onChange={(event) => onStyleChange({ fillColor: event.target.value, noFill: false })}
+                  />
+                </label>
+                <button
+                  type="button"
+                  disabled={disabled || !hasFill || !style?.noFill}
+                  onClick={() => onStyleChange({ fillColor: style?.fillColor ?? DEFAULT_FILL, noFill: false })}
+                >Aplicar cor</button>
+                <button
+                  type="button"
+                  disabled={disabled || !hasFill}
+                  aria-pressed={style?.noFill === true}
+                  onClick={() => onStyleChange({ noFill: true })}
+                >Sem preenchimento</button>
+              </div>
+            </details>
+            <label className="tool-color compact-style">
+              {FONTS[style?.font ?? "system"].label}
+              <select
+                aria-label="Fonte"
+                value={style?.font ?? "system"}
+                disabled={disabled || styleType !== "text"}
+                onChange={(event) => {
+                  const font = event.target.value as keyof typeof FONTS;
+                  if (Object.hasOwn(FONTS, font)) onStyleChange({ font });
+                }}
+              >
+                {Object.entries(FONTS).map(([id, { label }]) => (
+                  <option key={id} value={id}>{label}</option>
+                ))}
+              </select>
             </label>
             <button
               type="button"
-              disabled={disabled || !hasFill || !style?.noFill}
-              onClick={() => onStyleChange({ fillColor: style?.fillColor ?? DEFAULT_FILL, noFill: false })}
-            >Aplicar cor</button>
-            <button
-              type="button"
-              disabled={disabled || !hasFill}
-              aria-pressed={style?.noFill === true}
-              onClick={() => onStyleChange({ noFill: true })}
-            >Sem preenchimento</button>
+              aria-label="Negrito"
+              aria-pressed={style?.bold === true}
+              aria-keyshortcuts="Control+B Meta+B"
+              title="Negrito"
+              disabled={disabled || styleType !== "text"}
+              onClick={() => onStyleChange({ bold: !style?.bold })}
+            ><strong aria-hidden="true">B</strong></button>
+            <label className="tool-color compact-style">
+              {style?.fontSize ?? DEFAULT_FONT_SIZE} px
+              <select
+                aria-label="Tamanho"
+                value={style?.fontSize ?? DEFAULT_FONT_SIZE}
+                disabled={disabled || styleType !== "text"}
+                onChange={(event) => onStyleChange({ fontSize: Number(event.target.value) })}
+              >
+                {FONT_SIZES.map((size) => <option key={size} value={size}>{size} px</option>)}
+              </select>
+            </label>
           </div>
-        </details>
-        <label className="tool-color compact-style">
-          {FONTS[style?.font ?? "system"].label}
-          <select
-            aria-label="Fonte"
-            value={style?.font ?? "system"}
-            disabled={disabled || styleType !== "text"}
-            onChange={(event) => {
-              const font = event.target.value as keyof typeof FONTS;
-              if (Object.hasOwn(FONTS, font)) onStyleChange({ font });
-            }}
-          >
-            {Object.entries(FONTS).map(([id, { label }]) => (
-              <option key={id} value={id}>{label}</option>
-            ))}
-          </select>
-        </label>
-        <button
-          type="button"
-          aria-label="Negrito"
-          aria-pressed={style?.bold === true}
-          aria-keyshortcuts="Control+B Meta+B"
-          title="Negrito"
-          disabled={disabled || styleType !== "text"}
-          onClick={() => onStyleChange({ bold: !style?.bold })}
-        ><strong aria-hidden="true">B</strong></button>
-        <label className="tool-color compact-style">
-          {style?.fontSize ?? DEFAULT_FONT_SIZE} px
-          <select
-            aria-label="Tamanho"
-            value={style?.fontSize ?? DEFAULT_FONT_SIZE}
-            disabled={disabled || styleType !== "text"}
-            onChange={(event) => onStyleChange({ fontSize: Number(event.target.value) })}
-          >
-            {FONT_SIZES.map((size) => <option key={size} value={size}>{size} px</option>)}
-          </select>
-        </label>
+        </div>
       </div>
     </nav>
   );

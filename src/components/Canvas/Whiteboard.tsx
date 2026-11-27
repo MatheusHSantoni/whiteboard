@@ -205,6 +205,7 @@ export default function Whiteboard({
   }
 
   function updateGesture(event: KonvaEventObject<PointerEvent>) {
+    if (disabled) return;
     if (eraseGesture.current) {
       if (event.evt.buttons & 1) eraseAlong(event);
       else stopErase(event.evt.pointerId);
@@ -222,15 +223,17 @@ export default function Whiteboard({
   }
 
   function finishGesture(event: KonvaEventObject<PointerEvent>) {
+    // O Konva também emite pointerup ao cancelar um ponteiro sobre uma forma.
+    if (event.evt.type === "pointercancel") return;
     if (eraseGesture.current) {
-      eraseAlong(event);
+      if (!disabled) eraseAlong(event);
       stopErase(event.evt.pointerId);
       return;
     }
     if (!gesture || event.evt.pointerId !== gesture.pointerId) return;
     setGesture(null);
     const current = layer.current?.getRelativePointerPosition();
-    if (!current) return;
+    if (disabled || !current) return;
 
     if (gesture.type === "move") {
       const delta = { x: current.x - gesture.start.x, y: current.y - gesture.start.y };
@@ -270,7 +273,7 @@ export default function Whiteboard({
     : null;
   const moving = gesture?.type === "move" ? gesture : null;
   const marquee = gesture?.type === "marquee" ? selectionBounds(gesture.start, gesture.current) : null;
-  const selected = new Set(tool === "select" ? selectedIds : []);
+  const selected = new Set(!disabled && tool === "select" ? selectedIds : []);
 
   return (
     <section
@@ -309,7 +312,11 @@ export default function Whiteboard({
         stopPan(event.pointerId);
         stopErase(event.pointerId);
       }}
-      onPointerCancel={(event) => stopPan(event.pointerId)}
+      onPointerCancel={(event) => {
+        stopPan(event.pointerId);
+        stopErase(event.pointerId);
+        if (gesture?.pointerId === event.pointerId) setGesture(null);
+      }}
       onLostPointerCapture={(event) => {
         stopPan(event.pointerId);
         stopErase(event.pointerId);
@@ -332,10 +339,6 @@ export default function Whiteboard({
         onPointerDown={startGesture}
         onPointerMove={updateGesture}
         onPointerUp={finishGesture}
-        onPointerCancel={(event) => {
-          stopErase(event.evt.pointerId);
-          setGesture(null);
-        }}
       >
         <Layer ref={layer} x={offset.x} y={offset.y} scaleX={scale} scaleY={scale}>
           {shapes.filter((shape) => shape.id !== textPosition?.id).map((shape) => (
@@ -377,6 +380,8 @@ export default function Whiteboard({
             width: textPosition.width ?? DEFAULT_TEXT_WIDTH,
           }}
           onCommit={(text, marks, bold) => {
+            setTextPosition(null);
+            if (disabled) return;
             const { id, text: initialText, marks: initialMarks, bold: initialBold, ...position } = textPosition;
             if (id) {
               if (text !== initialText || Boolean(bold) !== Boolean(initialBold) ||
@@ -386,7 +391,6 @@ export default function Whiteboard({
             } else if (text) {
               onAdd({ id: crypto.randomUUID(), type: "text", ...position, text, marks, bold });
             }
-            setTextPosition(null);
           }}
           onCancel={() => setTextPosition(null)}
         />
